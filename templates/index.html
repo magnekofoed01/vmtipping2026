@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>VM 2026 Tipping</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">VM Tipping</a>
+        <div>
+            <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
+            <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
+            <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
+            <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
+            <a class="btn btn-outline-light" href="/poeng">Poengoversikt</a>
+        </div>
+    </div>
+</nav>
+<div class="container">
+    <h1 class="mb-4">Legg inn dine tips</h1>
+    <form method="POST" class="card p-4 shadow-sm">
+        <div class="mb-3">
+            <label class="form-label">Navn</label>
+            <input type="text" name="navn" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Telefon</label>
+            <input type="text" name="telefon" class="form-control" required>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">E-post</label>
+            <input type="email" name="epost" class="form-control" required>
+        </div>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Kamp #</th>
+                    <th>Fase</th>
+                    <th>Hjemmelag</th>
+                    <th>Bortelag</th>
+                    <th>Mål Hjemme</th>
+                    <th>Mål Borte</th>
+                    <th>Resultat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for kamp in kamper %}
+                <tr>
+                    <td>{{ kamp.id }}</td>
+                    <td>
+                        <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
+                            {% if kamp.gruppe %}Gruppe {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
+                        </span>
+                    </td>
+                    <td>{{ kamp.hjemmelag }}</td>
+                    <td>{{ kamp.bortelag }}</td>
+                    <td><input type="number" name="home_{{ kamp.id }}" class="form-control" min="0"></td>
+                    <td><input type="number" name="away_{{ kamp.id }}" class="form-control" min="0"></td>
+                    <td>
+                        <select name="result_{{ kamp.id }}" class="form-select">
+                            <option value="H">Hjemme</option>
+                            <option value="U">Uavgjort</option>
+                            <option value="B">Borte</option>
+                        </select>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-primary">Lagre tips</button>
+    </form>
+</div>
+</body>
+</html>

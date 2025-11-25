@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Regler og Poengsystem - VM Tipping</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .rule-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #4CAF50;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .example-box {
+            background-color: #e7f3ff;
+            border: 1px solid #b3d9ff;
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 5px;
+        }
+        .points {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">VM Tipping</a>
+        <div>
+            <a class="btn btn-outline-light me-2" href="/">Tipping</a>
+            <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
+            <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
+            <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
+            <a class="btn btn-outline-light" href="/poeng">Poengoversikt</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 class="mb-4">⚽ Regler og Poengsystem</h1>
+    
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3>Slik fungerer poengsystemet</h3>
+        </div>
+        <div class="card-body">
+            <p class="lead">For hver kamp du tipper, kan du tjene opptil <span class="points">3 poeng</span>!</p>
+            
+            <div class="rule-box">
+                <h4>📊 Poengberegning:</h4>
+                <ul class="list-unstyled ms-3">
+                    <li class="mb-3">
+                        <strong class="points">+1 poeng</strong> - Riktig resultat (Hjemme/Uavgjort/Borte)
+                        <div class="example-box">
+                            <strong>Eksempel:</strong> Du tipper at Canada vinner mot Mexico (resultat: H)<br>
+                            Faktisk resultat: Canada 2-1 Mexico (H) ✅<br>
+                            <span class="text-success">Du får 1 poeng for riktig resultat!</span>
+                        </div>
+                    </li>
+                    
+                    <li class="mb-3">
+                        <strong class="points">+2 poeng</strong> - Eksakt riktig antall mål for begge lag
+                        <div class="example-box">
+                            <strong>Eksempel:</strong> Du tipper Canada 3-1 Mexico<br>
+                            Faktisk resultat: Canada 3-1 Mexico ✅<br>
+                            <span class="text-success">Du får 2 ekstra poeng for eksakt resultat!</span><br>
+                            <span class="text-info">(Totalt 3 poeng: 1 for riktig resultat + 2 for eksakt)</span>
+                        </div>
+                    </li>
+                    
+                    <li class="mb-3">
+                        <strong class="points">+1 poeng</strong> - Riktig antall mål for ett av lagene
+                        <div class="example-box">
+                            <strong>Eksempel:</strong> Du tipper Canada 2-1 Mexico<br>
+                            Faktisk resultat: Canada 2-0 Mexico ✅<br>
+                            <span class="text-success">Du får 1 ekstra poeng for riktig hjemmemål!</span><br>
+                            <span class="text-info">(Totalt 2 poeng: 1 for riktig resultat + 1 for ett riktig mål)</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="alert alert-info mt-4">
+                <h5>💡 Tips for maksimal poengsum:</h5>
+                <ul>
+                    <li>Studer lagenes form og tidligere resultater</li>
+                    <li>Sjekk skadelister og oppsett</li>
+                    <li>Tenk realistisk - eksakte tips gir mest poeng!</li>
+                    <li>Husk at poengsummen oppdateres når fasit legges inn</li>
+                </ul>
+            </div>
+
+            <div class="rule-box">
+                <h4>📋 Eksempel på fullstendig poengberegning:</h4>
+                <table class="table table-bordered mt-3">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Ditt tips</th>
+                            <th>Faktisk resultat</th>
+                            <th>Poeng</th>
+                            <th>Forklaring</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="table-success">
+                            <td>Canada 2-1 Mexico (H)</td>
+                            <td>Canada 2-1 Mexico (H)</td>
+                            <td class="points">3</td>
+                            <td>Eksakt resultat! (1 + 2 poeng)</td>
+                        </tr>
+                        <tr class="table-info">
+                            <td>USA 3-1 Tyskland (H)</td>
+                            <td>USA 3-2 Tyskland (H)</td>
+                            <td class="points">2</td>
+                            <td>Riktig resultat + riktig hjemmemål (1 + 1 poeng)</td>
+                        </tr>
+                        <tr class="table-warning">
+                            <td>Brasil 1-1 Argentina (U)</td>
+                            <td>Brasil 2-2 Argentina (U)</td>
+                            <td class="points">1</td>
+                            <td>Kun riktig resultat (1 poeng)</td>
+                        </tr>
+                        <tr class="table-danger">
+                            <td>Canada 3-0 Mexico (H)</td>
+                            <td>Mexico 0-1 Canada (B)</td>
+                            <td class="points">0</td>
+                            <td>Feil resultat, ingen poeng</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-success mt-4">
+                <h5>🏆 Vinner:</h5>
+                <p class="mb-0">Den som har flest poeng når alle kampene er ferdigspilt, vinner!</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mb-4">
+        <a href="/" class="btn btn-primary btn-lg me-2">Legg inn tips</a>
+        <a href="/poeng" class="btn btn-success btn-lg">Se poengoversikt</a>
+    </div>
+</div>
+
+<footer class="bg-dark text-white text-center py-3 mt-5">
+    <p class="mb-0">VM Tipping 2026 - Lykke til! ⚽🏆</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Administrer - VM Tipping</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .danger-zone {
+            border: 2px solid #dc3545;
+            background-color: #fff5f5;
+        }
+        .participant-row:hover {
+            background-color: #f8f9fa;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">VM Tipping</a>
+        <div>
+            <a class="btn btn-outline-light me-2" href="/">Tipping</a>
+            <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
+            <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
+            <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
+            <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
+            <a class="btn btn-outline-light" href="/poeng">Poengoversikt</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h1 class="mb-4">⚙️ Administrasjon</h1>
+    
+    {% if melding %}
+    <div class="alert {% if '✅' in melding %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
+        {{ melding }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endif %}
+
+    <!-- Statistikk -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h2 class="text-primary">{{ totalt_tips }}</h2>
+                    <p class="mb-0">Totalt antall tips</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-body text-center">
+                    <h2 class="text-success">{{ totalt_resultater }}</h2>
+                    <p class="mb-0">Registrerte resultater</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Deltakere -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">👥 Deltakere ({{ deltakere|length }})</h4>
+        </div>
+        <div class="card-body">
+            {% if deltakere %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Navn</th>
+                            <th>Telefon</th>
+                            <th>E-post</th>
+                            <th>Antall tips</th>
+                            <th>Handling</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for deltaker in deltakere %}
+                        <tr class="participant-row">
+                            <td><strong>{{ deltaker[0] }}</strong></td>
+                            <td>{{ deltaker[1] }}</td>
+                            <td>{{ deltaker[2] }}</td>
+                            <td><span class="badge bg-info">{{ deltaker[3] }} tips</span></td>
+                            <td>
+                                <form method="POST" style="display:inline;" onsubmit="return confirm('Er du sikker på at du vil slette alle tips for {{ deltaker[0] }}?');">
+                                    <input type="hidden" name="action" value="slett_tips">
+                                    <input type="hidden" name="navn" value="{{ deltaker[0] }}">
+                                    <input type="hidden" name="telefon" value="{{ deltaker[1] }}">
+                                    <input type="hidden" name="epost" value="{{ deltaker[2] }}">
+                                    <button type="submit" class="btn btn-sm btn-danger">
+                                        🗑️ Slett tips
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center">Ingen deltakere registrert ennå.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Faresone -->
+    <div class="card shadow-sm danger-zone mb-4">
+        <div class="card-header bg-danger text-white">
+            <h4 class="mb-0">⚠️ Faresone</h4>
+        </div>
+        <div class="card-body">
+            <p class="text-danger"><strong>ADVARSEL:</strong> Disse handlingene kan ikke angres!</p>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Slett alle tips</h5>
+                            <p class="card-text">Sletter alle registrerte tips fra alle deltakere.</p>
+                            <form method="POST" onsubmit="return confirm('ADVARSEL: Dette sletter ALLE tips! Er du helt sikker?');">
+                                <input type="hidden" name="action" value="slett_alle_tips">
+                                <button type="submit" class="btn btn-danger">
+                                    🗑️ Slett alle tips
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Slett alle resultater</h5>
+                            <p class="card-text">Sletter alle registrerte kampresultater/fasit.</p>
+                            <form method="POST" onsubmit="return confirm('ADVARSEL: Dette sletter ALLE resultater! Er du helt sikker?');">
+                                <input type="hidden" name="action" value="slett_alle_resultater">
+                                <button type="submit" class="btn btn-danger">
+                                    🗑️ Slett alle resultater
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="/" class="btn btn-secondary">Tilbake til tipping</a>
+    </div>
+</div>
+
+<footer class="bg-dark text-white text-center py-3 mt-5">
+    <p class="mb-0">VM Tipping 2026 ⚽</p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
