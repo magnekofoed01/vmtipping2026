@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - VM 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .login-card {
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px 10px 0 0;
+        }
+        .login-body {
+            background: white;
+            padding: 30px;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        .admin-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-card">
+        <div class="login-header text-center">
+            <div class="admin-icon">🔐</div>
+            <h2>Admin Innlogging</h2>
+            <p class="mb-0">VM Tipping 2026</p>
+        </div>
+        <div class="login-body">
+            {% if error %}
+            <div class="alert alert-danger" role="alert">
+                ❌ {{ error }}
+            </div>
+            {% endif %}
+            
+            <form method="POST">
+                <div class="mb-4">
+                    <label for="password" class="form-label">Passord</label>
+                    <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                           placeholder="Skriv inn admin passord" required autofocus>
+                </div>
+                
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        🔓 Logg inn
+                    </button>
+                    <a href="/" class="btn btn-outline-secondary">
+                        ← Tilbake til forsiden
+                    </a>
+                </div>
+            </form>
+            
+            <div class="mt-4 text-center text-muted">
+                <small>Kun for administratorer</small>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

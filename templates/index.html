@@ -2,14 +2,47 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <title>VM 2026 Tipping</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>VM 2026 Tipping v3.0</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}?v=3">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"/>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        .gruppe-card {
+            margin-bottom: 8px;
+        }
+        .gruppe-header {
+            background-color: #0066cc;
+            color: white;
+            padding: 6px 10px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .lag-row {
+            padding: 5px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .lag-row:last-child {
+            border-bottom: none;
+        }
+        .fi {
+            margin-right: 6px;
+            border-radius: 2px;
+        }
+    </style>
 </head>
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
+            <a class="btn btn-outline-light me-2" href="/">Legg inn tips</a>
             <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
             <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
             <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
@@ -34,44 +67,502 @@
             <label class="form-label">E-post</label>
             <input type="email" name="epost" class="form-control" required>
         </div>
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Kamp #</th>
-                    <th>Fase</th>
-                    <th>Hjemmelag</th>
-                    <th>Bortelag</th>
-                    <th>Mål Hjemme</th>
-                    <th>Mål Borte</th>
-                    <th>Resultat</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for kamp in kamper %}
-                <tr>
-                    <td>{{ kamp.id }}</td>
-                    <td>
-                        <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
-                            {% if kamp.gruppe %}Gruppe {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
-                        </span>
-                    </td>
-                    <td>{{ kamp.hjemmelag }}</td>
-                    <td>{{ kamp.bortelag }}</td>
-                    <td><input type="number" name="home_{{ kamp.id }}" class="form-control" min="0"></td>
-                    <td><input type="number" name="away_{{ kamp.id }}" class="form-control" min="0"></td>
-                    <td>
-                        <select name="result_{{ kamp.id }}" class="form-select">
-                            <option value="H">Hjemme</option>
-                            <option value="U">Uavgjort</option>
-                            <option value="B">Borte</option>
-                        </select>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-primary">Lagre tips</button>
+        
+        <div class="row">
+            <!-- Kamper til venstre -->
+            <div class="col-lg-7">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Tipp kamper</h3>
+                    <div>
+                        <button type="button" class="btn btn-warning btn-sm me-2" onclick="randomTips()">
+                            🎲 Tilfeldig tipping
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllTips()">
+                            🗑️ Nullstill alle
+                        </button>
+                    </div>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Kamp #</th>
+                                <th>Dato</th>
+                                <th>Fase</th>
+                                <th>Hjemmelag</th>
+                                <th>Bortelag</th>
+                                <th>Mål H</th>
+                                <th>Mål B</th>
+                                <th>Resultat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kamp in kamper %}
+                            <tr data-kamp-id="{{ kamp.id }}" data-gruppe="{{ kamp.gruppe }}" data-fase="{{ kamp.fase }}">
+                                <td>{{ kamp.id }}</td>
+                                <td>
+                                    {% if kamp.dato %}
+                                    <small>{{ kamp.dato[8:10] }}/{{ kamp.dato[5:7] }}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
+                                        {% if kamp.gruppe %}Gr. {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if kamp.hjemmelag[1] %}<span class="fi fi-{{ kamp.hjemmelag[1] }}"></span> {% endif %}{{ kamp.hjemmelag[0] }}
+                                </td>
+                                <td>
+                                    {% if kamp.bortelag[1] %}<span class="fi fi-{{ kamp.bortelag[1] }}"></span> {% endif %}{{ kamp.bortelag[0] }}
+                                </td>
+                                <td style="width: 60px;"><input type="number" name="home_{{ kamp.id }}" id="home_{{ kamp.id }}" class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
+                                <td style="width: 60px;"><input type="number" name="away_{{ kamp.id }}" id="away_{{ kamp.id }}" class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
+                                <td style="width: 100px;">
+                                    <select name="result_{{ kamp.id }}" id="result_{{ kamp.id }}" class="form-select form-select-sm" style="background-color: #e9ecef; pointer-events: none;">
+                                        <option value="">-</option>
+                                        <option value="H">H</option>
+                                        <option value="U">U</option>
+                                        <option value="B">B</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Gruppeplasseringer til høyre -->
+            <div class="col-lg-5">
+                <h3 class="mb-3">Gruppeplasseringer</h3>
+                <div class="alert alert-info py-2">
+                    <small><strong>Info:</strong> Plasseringene beregnes automatisk fra kamptips, men du kan justere manuelt. <strong>Bonus:</strong> Riktig plassering = 3 poeng per lag!</small>
+                </div>
+                
+                <div style="max-height: 1200px; overflow-y: auto;">
+                    {% for gruppe_navn, lag_liste in grupper.items() %}
+                    <div class="card gruppe-card mb-3">
+                        <div class="gruppe-header d-flex justify-content-between align-items-center">
+                            <span>Gruppe {{ gruppe_navn }}</span>
+                            <button type="button" class="btn btn-sm btn-light" onclick="calculateGroupStandings('{{ gruppe_navn }}')" style="font-size: 0.75em; padding: 2px 8px;">
+                                🔄 Auto-beregn
+                            </button>
+                        </div>
+                        <div class="card-body p-2">
+                            {% for lag in lag_liste %}
+                            <div class="lag-row d-flex justify-content-between align-items-center" style="padding: 8px;">
+                                <div style="flex: 1;">
+                                    <span style="font-size: 0.95em;">
+                                        {% if lag[1] %}
+                                        <span class="fi fi-{{ lag[1] }}"></span>
+                                        {% endif %}
+                                        {{ lag[0] }}
+                                    </span>
+                                    <small class="text-muted ms-2" id="stats_{{ gruppe_navn }}_{{ lag[0] }}"></small>
+                                </div>
+                                <select name="gruppe_{{ gruppe_navn }}_{{ lag[0] }}" 
+                                        class="form-select form-select-sm gruppe-select" 
+                                        data-gruppe="{{ gruppe_navn }}"
+                                        onchange="validateGroupPositions('{{ gruppe_navn }}')"
+                                        required 
+                                        style="width: 80px; font-size: 0.9em;">
+                                    <option value="">Velg</option>
+                                    <option value="1">1.</option>
+                                    <option value="2">2.</option>
+                                    <option value="3">3.</option>
+                                    <option value="4">4.</option>
+                                </select>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-success btn-sm" onclick="calculateAllGroups()">
+                        🔄 Auto-beregn alle grupper
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">Send inn alle tips</button>
+        </div>
     </form>
 </div>
+
+<script>
+console.log('✅ JavaScript loaded - version 3.0 - CACHE CLEARED - Columns Fixed: cells[3] and cells[4]');
+
+// Gruppe data - mapping av gruppe til lag
+const gruppeData = {
+    {% for gruppe_navn, lag_liste in grupper.items() %}
+    "{{ gruppe_navn }}": [
+        {% for lag in lag_liste %}"{{ lag[0] }}"{% if not loop.last %}, {% endif %}{% endfor %}
+    ]{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+// Beregn gruppetabell basert på tippede kamper
+function calculateGroupStandings(gruppeNavn) {
+    const teams = gruppeData[gruppeNavn];
+    const standings = {};
+    
+    console.log(`=== Beregner gruppe ${gruppeNavn} ===`);
+    console.log('Lag i gruppen:', teams);
+    
+    // Initialiser statistikk for hvert lag
+    teams.forEach(team => {
+        standings[team] = {
+            points: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
+            goalDifference: 0,
+            played: 0
+        };
+    });
+    
+    // Gå gjennom alle kamper og finn gruppekamper for denne gruppen
+    const rows = document.querySelectorAll(`tbody tr[data-gruppe="${gruppeNavn}"]`);
+    console.log(`Fant ${rows.length} kamper for gruppe ${gruppeNavn}`);
+    rows.forEach((row) => {
+        const kampId = row.getAttribute('data-kamp-id');
+        console.log(`Prosesserer kamp ${kampId}`);
+        const cells = row.querySelectorAll('td');
+        
+        // Hent lagnavn direkte fra HTML-strukturen
+        const homeCell = cells[3];  // Kolonne 4: Hjemmelag (0-indeksert)
+        const awayCell = cells[4];  // Kolonne 5: Bortelag (0-indeksert)
+        
+        // Få rå tekst og normaliser
+        let homeTeamRaw = homeCell.textContent.replace(/\s+/g, ' ').trim();
+        let awayTeamRaw = awayCell.textContent.replace(/\s+/g, ' ').trim();
+        
+        // Finn matchende lagnavn - bruk strengere matching
+        let homeTeam = null;
+        let awayTeam = null;
+        
+        // Prøv å finne eksakt match først
+        for (const team of teams) {
+            if (homeTeamRaw === team) homeTeam = team;
+            if (awayTeamRaw === team) awayTeam = team;
+        }
+        
+        // Hvis ikke eksakt match, prøv substring matching
+        if (!homeTeam) {
+            for (const team of teams) {
+                if (homeTeamRaw.includes(team) || team.includes(homeTeamRaw)) {
+                    homeTeam = team;
+                    break;
+                }
+            }
+        }
+        
+        if (!awayTeam) {
+            for (const team of teams) {
+                if (awayTeamRaw.includes(team) || team.includes(awayTeamRaw)) {
+                    awayTeam = team;
+                    break;
+                }
+            }
+        }
+        
+        if (!homeTeam || !awayTeam) {
+            console.error(`Kamp ${kampId}: Kunne ikke matche lag i gruppe ${gruppeNavn}`);
+            console.error('  Raw hjemme:', homeTeamRaw);
+            console.error('  Raw borte:', awayTeamRaw);
+            console.error('  Tilgjengelige lag:', teams);
+            return;
+        }
+        
+        // Hent tippede mål fra input-feltene
+        const homeGoalsInput = document.getElementById('home_' + kampId);
+        const awayGoalsInput = document.getElementById('away_' + kampId);
+        const homeGoals = parseInt(homeGoalsInput?.value);
+        const awayGoals = parseInt(awayGoalsInput?.value);
+        
+        // Kun beregn hvis begge mål er fylt inn
+        if (!isNaN(homeGoals) && !isNaN(awayGoals)) {
+            console.log(`Kamp ${kampId}: ${homeTeam} ${homeGoals}-${awayGoals} ${awayTeam}`);
+            // Oppdater statistikk
+            standings[homeTeam].played++;
+            standings[awayTeam].played++;
+            standings[homeTeam].goalsFor += homeGoals;
+            standings[homeTeam].goalsAgainst += awayGoals;
+            standings[awayTeam].goalsFor += awayGoals;
+            standings[awayTeam].goalsAgainst += homeGoals;
+            
+            // Tildel poeng basert på tippet resultat
+            if (homeGoals > awayGoals) {
+                standings[homeTeam].points += 3; // Hjemmeseier
+            } else if (awayGoals > homeGoals) {
+                standings[awayTeam].points += 3; // Borteseier
+            } else {
+                standings[homeTeam].points += 1; // Uavgjort
+                standings[awayTeam].points += 1;
+            }
+            
+            // Beregn målforskjell
+            standings[homeTeam].goalDifference = standings[homeTeam].goalsFor - standings[homeTeam].goalsAgainst;
+            standings[awayTeam].goalDifference = standings[awayTeam].goalsFor - standings[awayTeam].goalsAgainst;
+        }
+    });
+    
+    // Sorter lagene etter FIFA-regler: 1) Poeng, 2) Målforskjell, 3) Scorede mål
+    const sortedTeams = teams.slice().sort((a, b) => {
+        const statsA = standings[a];
+        const statsB = standings[b];
+        
+        if (statsB.points !== statsA.points) return statsB.points - statsA.points;
+        if (statsB.goalDifference !== statsA.goalDifference) return statsB.goalDifference - statsA.goalDifference;
+        return statsB.goalsFor - statsA.goalsFor;
+    });
+    
+    // Oppdater select-feltene og vis statistikk
+    sortedTeams.forEach((team, index) => {
+        const position = index + 1;
+        const stats = standings[team];
+        
+        // Finn select-elementet for dette laget
+        const selectElement = document.querySelector(`select[name="gruppe_${gruppeNavn}_${team}"]`);
+        if (selectElement) {
+            selectElement.value = position;
+        }
+        
+        // Vis statistikk ved siden av lagnavn
+        const statsElement = document.getElementById(`stats_${gruppeNavn}_${team}`);
+        if (statsElement) {
+            statsElement.textContent = `(${stats.points}p, ${stats.goalDifference > 0 ? '+' : ''}${stats.goalDifference})`;
+        }
+    });
+    
+    // Valider at ingen duplikater oppstår
+    validateGroupPositions(gruppeNavn);
+}
+
+// Beregn alle grupper
+function calculateAllGroups() {
+    const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+    grupper.forEach(gruppe => calculateGroupStandings(gruppe));
+    alert('✅ Alle gruppetabeller er beregnet!');
+}
+
+// FIFA Rankings (approximert basert på FIFA ranking og siste resultater)
+// Kvalifiseringslag (UEFA PO A-D og FIFA PO 1-2) har lavere rating siden de ikke er direkte kvalifisert
+const teamRankings = {
+    "Mexico": 15, "Sør-Afrika": 60, "Sør-Korea": 25, "UEFA PO D": 70,
+    "Canada": 45, "UEFA PO A": 68, "Qatar": 55, "Sveits": 18,
+    "Brasil": 5, "Marokko": 13, "Haiti": 85, "Skottland": 40,
+    "USA": 16, "Paraguay": 50, "Australia": 28, "UEFA PO C": 72,
+    "Tyskland": 12, "Curaçao": 80, "Elfenbenskysten": 35, "Ecuador": 38,
+    "Nederland": 8, "Japan": 20, "UEFA PO B": 75, "Tunisia": 32,
+    "Belgia": 6, "Egypt": 36, "Iran": 22, "New Zealand": 95,
+    "Spania": 10, "Kapp Verde": 70, "Saudi-Arabia": 54, "Uruguay": 14,
+    "Frankrike": 2, "Senegal": 19, "FIFA PO 2": 78, "Norge": 48,
+    "Argentina": 1, "Algerie": 42, "Østerrike": 26, "Jordan": 87,
+    "Portugal": 7, "FIFA PO 1": 76, "Usbekistan": 65, "Colombia": 17,
+    "England": 4, "Kroatia": 9, "Ghana": 58, "Panama": 52
+};
+
+function randomTips() {
+    console.log('=== Starter tilfeldig tipping ===');
+    // Generer tilfeldige resultater for alle kamper
+    const rows = document.querySelectorAll('tbody tr');
+    
+    rows.forEach((row, index) => {
+        // Finn input-feltene i denne raden
+        const homeInput = row.querySelector('input[name^="home_"]');
+        const awayInput = row.querySelector('input[name^="away_"]');
+        
+        if (!homeInput || !awayInput) {
+            console.error(`Rad ${index}: Kunne ikke finne input-felt`);
+            return;
+        }
+        
+        // Hent kamp ID fra input name (f.eks. "home_1" -> 1)
+        const kampId = homeInput.name.replace('home_', '');
+        
+        // Hent lagnavn fra tabellen - normaliser whitespace
+        const cells = row.querySelectorAll('td');
+        const homeTeam = cells[3].textContent.replace(/\s+/g, ' ').trim();
+        const awayTeam = cells[4].textContent.replace(/\s+/g, ' ').trim();
+        
+        // Hent rankings (lavere tall = bedre lag)
+        const homeRanking = teamRankings[homeTeam] || 50;
+        const awayRanking = teamRankings[awayTeam] || 50;
+        
+        // Debug logging
+        if (index < 3) {
+            console.log(`Kamp ${kampId}: "${homeTeam}" (${homeRanking}) vs "${awayTeam}" (${awayRanking})`);
+            console.log(`  Home input: name="${homeInput.name}", id="${homeInput.id}"`);
+            console.log(`  Away input: name="${awayInput.name}", id="${awayInput.id}"`);
+        }
+        
+        // Beregn sannsynlighet basert på ranking
+        const rankingDiff = awayRanking - homeRanking;
+        const homeAdvantage = 5; // Hjemmebane fordel
+        
+        let homeGoals, awayGoals;
+        
+        // Bedre lag får høyere sannsynlighet for flere mål
+        if (rankingDiff > 20) {
+            // Hjemmelaget er klart bedre
+            homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+            awayGoals = Math.floor(Math.random() * 2); // 0-1
+        } else if (rankingDiff < -20) {
+            // Bortelaget er klart bedre
+            homeGoals = Math.floor(Math.random() * 2); // 0-1
+            awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+        } else if (rankingDiff > 5) {
+            // Hjemmelaget litt bedre
+            homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+            awayGoals = Math.floor(Math.random() * 3); // 0-2
+        } else if (rankingDiff < -5) {
+            // Bortelaget litt bedre
+            homeGoals = Math.floor(Math.random() * 3); // 0-2
+            awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+        } else {
+            // Jevne lag
+            homeGoals = Math.floor(Math.random() * 3); // 0-2
+            awayGoals = Math.floor(Math.random() * 3); // 0-2
+        }
+        
+        homeInput.value = homeGoals;
+        awayInput.value = awayGoals;
+        updateResult(parseInt(kampId));
+    });
+    
+    // Beregn gruppetabeller automatisk etter random tipping
+    calculateAllGroups();
+    
+    alert('🎲 Tilfeldige tips generert basert på FIFA-ranking!');
+}
+console.log('✅ randomTips function defined');
+
+function clearAllTips() {
+    if (!confirm('🗑️ Er du sikker på at du vil nullstille alle tips?')) {
+        return;
+    }
+    
+    // Nullstill alle kamptips
+    const rows = document.querySelectorAll('tbody tr');
+    rows.forEach((row, index) => {
+        const kampId = index + 1;
+        const homeInput = document.getElementById('home_' + kampId);
+        const awayInput = document.getElementById('away_' + kampId);
+        const resultSelect = document.getElementById('result_' + kampId);
+        
+        if (homeInput) homeInput.value = '';
+        if (awayInput) awayInput.value = '';
+        if (resultSelect) {
+            resultSelect.selectedIndex = 0;
+            resultSelect.value = '';
+        }
+    });
+    
+    // Nullstill alle gruppeplasseringer
+    const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+    grupper.forEach(gruppe => {
+        const teams = gruppeData[gruppe];
+        teams.forEach(team => {
+            const selectElement = document.querySelector(`select[name="gruppe_${gruppe}_${team}"]`);
+            if (selectElement) {
+                selectElement.value = '';
+                selectElement.style.borderColor = '';
+                selectElement.style.backgroundColor = '';
+            }
+            const statsElement = document.getElementById(`stats_${gruppe}_${team}`);
+            if (statsElement) {
+                statsElement.textContent = '';
+            }
+        });
+    });
+    
+    alert('✅ Alle tips er nullstilt!');
+}
+
+function validateGroupPositions(gruppeNavn) {
+    // Hent alle select-elementer for denne gruppen
+    const selects = document.querySelectorAll(`select[data-gruppe="${gruppeNavn}"]`);
+    const selectedValues = [];
+    
+    selects.forEach(select => {
+        if (select.value) {
+            selectedValues.push(select.value);
+        }
+    });
+    
+    // Sjekk for duplikater
+    const duplicates = selectedValues.filter((value, index) => selectedValues.indexOf(value) !== index);
+    
+    if (duplicates.length > 0) {
+        // Vis feilmelding
+        selects.forEach(select => {
+            if (duplicates.includes(select.value)) {
+                select.style.borderColor = 'red';
+                select.style.backgroundColor = '#ffe6e6';
+            }
+        });
+        return false;
+    } else {
+        // Fjern feilmarkering
+        selects.forEach(select => {
+            select.style.borderColor = '';
+            select.style.backgroundColor = '';
+        });
+        return true;
+    }
+}
+
+// Valider alle grupper før innsending
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let hasErrors = false;
+            const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+            
+            grupper.forEach(gruppe => {
+                if (!validateGroupPositions(gruppe)) {
+                    hasErrors = true;
+                }
+            });
+            
+            if (hasErrors) {
+                e.preventDefault();
+                alert('⚠️ Feil: Hvert lag i en gruppe må ha unik plassering (1-4). Sjekk de røde feltene.');
+                return false;
+            }
+        });
+    }
+});
+
+function updateResult(kampId) {
+    const homeInput = document.getElementById('home_' + kampId);
+    const awayInput = document.getElementById('away_' + kampId);
+    const resultSelect = document.getElementById('result_' + kampId);
+    
+    const homeGoals = parseInt(homeInput.value);
+    const awayGoals = parseInt(awayInput.value);
+    
+    if (isNaN(homeGoals) || isNaN(awayGoals)) {
+        resultSelect.selectedIndex = 0;
+        resultSelect.value = '';
+        return;
+    }
+    
+    if (homeGoals > awayGoals) {
+        resultSelect.value = 'H';
+    } else if (homeGoals === awayGoals) {
+        resultSelect.value = 'U';
+    } else {
+        resultSelect.value = 'B';
+    }
+}
+</script>
+
 </body>
 </html>

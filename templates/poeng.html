@@ -10,7 +10,7 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
-            <a class="nav-link text-light d-inline" href="/">Tipping</a>
+            <a class="nav-link text-light d-inline" href="/">Legg inn tips</a>
             <a class="nav-link text-light d-inline" href="/deltakere">Deltakere</a>
             <a class="nav-link text-light d-inline" href="/fasit">Vis fasit</a>
             <a class="nav-link text-light d-inline" href="/dagsvinner">Dagsvinner</a>
@@ -45,7 +45,9 @@
                     <tr>
                         <th>Plass</th>
                         <th>Navn</th>
-                        <th>Poeng</th>
+                        <th>Kamper</th>
+                        <th>Grupper</th>
+                        <th>Totalt</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -53,7 +55,9 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ item[0][0] }}</td>
-                        <td>{{ item[1] }}</td>
+                        <td>{{ item[1].kamper }}</td>
+                        <td>{{ item[1].grupper }}</td>
+                        <td><strong>{{ item[1].totalt }}</strong></td>
                     </tr>
                     {% endfor %}
                 </tbody>

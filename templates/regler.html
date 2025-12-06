@@ -30,7 +30,7 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
-            <a class="btn btn-outline-light me-2" href="/">Tipping</a>
+            <a class="btn btn-outline-light me-2" href="/">Legg inn tips</a>
             <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
             <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
             <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
@@ -141,9 +141,43 @@
         </div>
     </div>
 
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-success text-white">
+            <h3>Gruppetipping</h3>
+        </div>
+        <div class="card-body">
+            <p class="lead">I tillegg til å tippe kampresultater, kan du også tippe plasseringene i hver gruppe!</p>
+            
+            <div class="rule-box">
+                <h4>🏅 Poengberegning for gruppetips:</h4>
+                <ul class="list-unstyled ms-3">
+                    <li class="mb-3">
+                        <strong class="points">+3 poeng</strong> - For hvert lag du plasserer riktig (1., 2., 3. eller 4. plass)
+                        <div class="example-box">
+                            <strong>Eksempel - Gruppe A:</strong><br>
+                            Du tipper: 1. Mexico, 2. Sør-Korea, 3. Sør-Afrika, 4. UEFA PO D<br>
+                            Faktisk sluttplassering: 1. Mexico ✅, 2. Sør-Afrika ❌, 3. Sør-Korea ❌, 4. UEFA PO D ✅<br>
+                            <span class="text-success">Du får 6 poeng (3+3) for Mexico og UEFA PO D!</span>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="alert alert-warning mt-4">
+                <h5>⚠️ Viktig om gruppetips:</h5>
+                <ul>
+                    <li>Gruppetips gir poeng kun når alle kampene i gruppespillet er ferdigspilt</li>
+                    <li>Du må tippe alle lag i alle grupper</li>
+                    <li>Hvert lag kan kun få én plassering (1-4) i sin gruppe</li>
+                    <li>Totalt kan du tjene opptil 144 poeng på gruppetips (48 lag × 3 poeng)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
     <div class="text-center mb-4">
         <a href="/" class="btn btn-primary btn-lg me-2">Legg inn tips</a>
-        <a href="/poeng" class="btn btn-success btn-lg">Se poengoversikt</a>
+        <a href="/poeng" class="btn btn-info btn-lg">Se poengoversikt</a>
     </div>
 </div>
 

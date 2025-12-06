@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <title>Gruppefasit - VM 2026</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"/>
+    <style>
+        .gruppe-card {
+            margin-bottom: 20px;
+        }
+        .gruppe-header {
+            background-color: #dc3545;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .lag-row {
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .lag-row:last-child {
+            border-bottom: none;
+        }
+        select {
+            width: 80px;
+        }
+        .fi {
+            margin-right: 8px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/">VM Tipping</a>
+        <div>
+            <a class="btn btn-outline-light me-2" href="/">Legg inn tips</a>
+            <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
+            <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
+            <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
+            <a class="btn btn-outline-light me-2" href="/gruppefasit">Gruppefasit</a>
+            <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
+            <a class="btn btn-outline-light" href="/poeng">Poengoversikt</a>
+        </div>
+    </div>
+</nav>
+<div class="container">
+    <h1 class="mb-4">Legg inn endelige gruppeplasseringer</h1>
+    <div class="alert alert-warning">
+        <strong>Administrator:</strong> Her legger du inn de endelige plasseringene etter at alle gruppekampene er spilt.
+    </div>
+    
+    <form method="POST" class="card p-4 shadow-sm">
+        <h3 class="mt-4 mb-3">Endelige plasseringer</h3>
+        <div class="row">
+            {% for gruppe_navn, lag_liste in grupper.items() %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card gruppe-card">
+                    <div class="gruppe-header">
+                        Gruppe {{ gruppe_navn }}
+                    </div>
+                    <div class="card-body p-0">
+                        {% for lag in lag_liste %}
+                        <div class="lag-row d-flex justify-content-between align-items-center">
+                            <span>
+                                {% if lag[1] %}
+                                <span class="fi fi-{{ lag[1] }}"></span>
+                                {% endif %}
+                                {{ lag[0] }}
+                            </span>
+                            <select name="fasit_{{ gruppe_navn }}_{{ lag[0] }}" class="form-select form-select-sm">
+                                <option value="">Velg</option>
+                                <option value="1" {% if fasit.get((gruppe_navn, lag[0])) == 1 %}selected{% endif %}>1. plass</option>
+                                <option value="2" {% if fasit.get((gruppe_navn, lag[0])) == 2 %}selected{% endif %}>2. plass</option>
+                                <option value="3" {% if fasit.get((gruppe_navn, lag[0])) == 3 %}selected{% endif %}>3. plass</option>
+                                <option value="4" {% if fasit.get((gruppe_navn, lag[0])) == 4 %}selected{% endif %}>4. plass</option>
+                            </select>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <button type="submit" class="btn btn-danger btn-lg mt-4">Lagre endelige plasseringer</button>
+    </form>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

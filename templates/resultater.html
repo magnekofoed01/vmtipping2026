@@ -4,68 +4,234 @@
     <meta charset="UTF-8">
     <title>Legg inn fasit - VM Tipping</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"/>
+    <style>
+        .gruppe-card {
+            margin-bottom: 8px;
+        }
+        .gruppe-header {
+            background-color: #dc3545;
+            color: white;
+            padding: 6px 10px;
+            font-weight: bold;
+            font-size: 0.95em;
+        }
+        .lag-row {
+            padding: 5px 8px;
+            border-bottom: 1px solid #ddd;
+        }
+        .lag-row:last-child {
+            border-bottom: none;
+        }
+        .fi {
+            margin-right: 6px;
+            border-radius: 2px;
+        }
+    </style>
 </head>
 <body class="bg-light">
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
-            <a class="nav-link text-white d-inline" href="/">Tipping</a>
+            <a class="nav-link text-white d-inline" href="/">Legg inn tips</a>
             <a class="nav-link text-white d-inline" href="/deltakere">Deltakere</a>
             <a class="nav-link text-white d-inline" href="/fasit">Vis fasit</a>
             <a class="nav-link text-white d-inline" href="/dagsvinner">Dagsvinner</a>
             <a class="nav-link text-white d-inline" href="/regler">Regler</a>
             <a class="nav-link text-white d-inline" href="/poeng">Poengoversikt</a>
             <a class="nav-link text-warning d-inline" href="/administrer">⚙️ Admin</a>
+            <a class="btn btn-outline-danger btn-sm" href="/admin-logout">🔓 Logg ut</a>
         </div>
     </div>
 </nav>
-<div class="container">
+<div class="container-fluid px-4">
     <h1 class="mb-4">Legg inn fasit</h1>
     <form method="POST" class="card p-4 shadow-sm">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th>Kamp #</th>
-                    <th>Fase</th>
-                    <th>Hjemmelag</th>
-                    <th>Bortelag</th>
-                    <th>Mål Hjemme</th>
-                    <th>Mål Borte</th>
-                    <th>Resultat</th>
-                    <th>Dato</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for kamp in kamper %}
-                <tr>
-                    <td>{{ kamp.id }}</td>
-                    <td>
-                        <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
-                            {% if kamp.gruppe %}Gruppe {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
-                        </span>
-                    </td>
-                    <td>{{ kamp.hjemmelag }}</td>
-                    <td>{{ kamp.bortelag }}</td>
-                    <td><input type="number" name="res_home_{{ kamp.id }}" class="form-control" min="0"></td>
-                    <td><input type="number" name="res_away_{{ kamp.id }}" class="form-control" min="0"></td>
-                    <td>
-                        <select name="res_result_{{ kamp.id }}" class="form-select">
-                            <option value="H">Hjemme</option>
-                            <option value="U">Uavgjort</option>
-                            <option value="B">Borte</option>
-                        </select>
-                    </td>
-                    <td><input type="date" name="res_date_{{ kamp.id }}" class="form-control"></td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-primary">Lagre fasit</button>
+        <div class="row">
+            <!-- Kamper til venstre -->
+            <div class="col-lg-7">
+                <h3 class="mb-3">Kampresultater</h3>
+                <div style="overflow-x: auto;">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Kamp #</th>
+                                <th>Dato</th>
+                                <th>Fase</th>
+                                <th>Hjemmelag</th>
+                                <th>Bortelag</th>
+                                <th>Mål H</th>
+                                <th>Mål B</th>
+                                <th>Resultat</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for kamp in kamper %}
+                            <tr>
+                                <td>{{ kamp.id }}</td>
+                                <td style="width: 130px;">
+                                    <input type="date" name="res_date_{{ kamp.id }}" class="form-control form-control-sm" 
+                                           value="{{ kamp.dato if kamp.dato else '' }}">
+                                </td>
+                                <td>
+                                    <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
+                                        {% if kamp.gruppe %}Gr. {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if kamp.hjemmelag[1] %}
+                                    <span class="fi fi-{{ kamp.hjemmelag[1] }}"></span>
+                                    {% endif %}
+                                    {{ kamp.hjemmelag[0] }}
+                                </td>
+                                <td>
+                                    {% if kamp.bortelag[1] %}
+                                    <span class="fi fi-{{ kamp.bortelag[1] }}"></span>
+                                    {% endif %}
+                                    {{ kamp.bortelag[0] }}
+                                </td>
+                                <td style="width: 60px;"><input type="number" name="res_home_{{ kamp.id }}" id="res_home_{{ kamp.id }}" class="form-control form-control-sm" min="0" onchange="updateResultFasit({{ kamp.id }})"></td>
+                                <td style="width: 60px;"><input type="number" name="res_away_{{ kamp.id }}" id="res_away_{{ kamp.id }}" class="form-control form-control-sm" min="0" onchange="updateResultFasit({{ kamp.id }})"></td>
+                                <td style="width: 100px;">
+                                    <select name="res_result_{{ kamp.id }}" id="res_result_{{ kamp.id }}" class="form-select form-select-sm" style="background-color: #e9ecef; pointer-events: none;">
+                                        <option value="">-</option>
+                                        <option value="H">H</option>
+                                        <option value="U">U</option>
+                                        <option value="B">B</option>
+                                    </select>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Gruppefasit til høyre -->
+            <div class="col-lg-5">
+                <h3 class="mb-3">Endelige gruppeplasseringer</h3>
+                <div class="alert alert-warning py-2">
+                    <small><strong>Admin:</strong> Legg inn plasseringer etter gruppespillet</small>
+                </div>
+                
+                <div style="max-height: 1200px; overflow-y: auto;">
+                    {% for gruppe_navn, lag_liste in grupper.items() %}
+                    <div class="card gruppe-card mb-3">
+                        <div class="gruppe-header">
+                            Gruppe {{ gruppe_navn }}
+                        </div>
+                        <div class="card-body p-2">
+                            {% for lag in lag_liste %}
+                            <div class="lag-row d-flex justify-content-between align-items-center" style="padding: 8px;">
+                                <span style="font-size: 0.95em;">
+                                    {% if lag[1] %}
+                                    <span class="fi fi-{{ lag[1] }}"></span>
+                                    {% endif %}
+                                    {{ lag[0] }}
+                                </span>
+                                <select name="fasit_{{ gruppe_navn }}_{{ lag[0] }}" 
+                                        class="form-select form-select-sm fasit-select" 
+                                        data-gruppe="{{ gruppe_navn }}"
+                                        onchange="validateFasitPositions('{{ gruppe_navn }}')"
+                                        style="width: 80px; font-size: 0.9em;">
+                                    <option value="">Velg</option>
+                                    <option value="1">1.</option>
+                                    <option value="2">2.</option>
+                                    <option value="3">3.</option>
+                                    <option value="4">4.</option>
+                                </select>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-4">
+            <button type="submit" class="btn btn-primary btn-lg">Lagre all fasit</button>
+            <a href="/" class="btn btn-secondary btn-lg ms-2">Tilbake</a>
+        </div>
     </form>
-    <div class="mt-3">
-        <a href="/" class="btn btn-secondary">Tilbake til tipping</a>
-    </div>
 </div>
+
+<script>
+function validateFasitPositions(gruppeNavn) {
+    // Hent alle select-elementer for denne gruppen
+    const selects = document.querySelectorAll(`select[data-gruppe="${gruppeNavn}"]`);
+    const selectedValues = [];
+    
+    selects.forEach(select => {
+        if (select.value) {
+            selectedValues.push(select.value);
+        }
+    });
+    
+    // Sjekk for duplikater
+    const duplicates = selectedValues.filter((value, index) => selectedValues.indexOf(value) !== index);
+    
+    if (duplicates.length > 0) {
+        // Vis feilmelding
+        selects.forEach(select => {
+            if (duplicates.includes(select.value)) {
+                select.style.borderColor = 'red';
+                select.style.backgroundColor = '#ffe6e6';
+            }
+        });
+        return false;
+    } else {
+        // Fjern feilmarkering
+        selects.forEach(select => {
+            select.style.borderColor = '';
+            select.style.backgroundColor = '';
+        });
+        return true;
+    }
+}
+
+// Valider alle grupper før innsending
+document.querySelector('form').addEventListener('submit', function(e) {
+    let hasErrors = false;
+    const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
+    
+    grupper.forEach(gruppe => {
+        if (!validateFasitPositions(gruppe)) {
+            hasErrors = true;
+        }
+    });
+    
+    if (hasErrors) {
+        e.preventDefault();
+        alert('⚠️ Feil: Hvert lag i en gruppe må ha unik plassering (1-4). Sjekk de røde feltene.');
+        return false;
+    }
+});
+
+function updateResultFasit(kampId) {
+    const homeInput = document.getElementById('res_home_' + kampId);
+    const awayInput = document.getElementById('res_away_' + kampId);
+    const resultSelect = document.getElementById('res_result_' + kampId);
+    
+    const homeGoals = parseInt(homeInput.value);
+    const awayGoals = parseInt(awayInput.value);
+    
+    if (isNaN(homeGoals) || isNaN(awayGoals)) {
+        resultSelect.selectedIndex = 0;
+        resultSelect.value = '';
+        return;
+    }
+    
+    if (homeGoals > awayGoals) {
+        resultSelect.value = 'H';
+    } else if (homeGoals === awayGoals) {
+        resultSelect.value = 'U';
+    } else {
+        resultSelect.value = 'B';
+    }
+}
+</script>
+
 </body>
 </html>
