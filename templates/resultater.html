@@ -72,7 +72,7 @@
                                 <td>{{ kamp.id }}</td>
                                 <td style="width: 130px;">
                                     <input type="date" name="res_date_{{ kamp.id }}" class="form-control form-control-sm" 
-                                           value="{{ kamp.dato if kamp.dato else '' }}">
+                                           value="{{ eksisterende_resultater[kamp.id].dato if kamp.id in eksisterende_resultater and eksisterende_resultater[kamp.id].dato else '' }}">
                                 </td>
                                 <td>
                                     <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
@@ -91,14 +91,14 @@
                                     {% endif %}
                                     {{ kamp.bortelag[0] }}
                                 </td>
-                                <td style="width: 60px;"><input type="number" name="res_home_{{ kamp.id }}" id="res_home_{{ kamp.id }}" class="form-control form-control-sm" min="0" onchange="updateResultFasit({{ kamp.id }})"></td>
-                                <td style="width: 60px;"><input type="number" name="res_away_{{ kamp.id }}" id="res_away_{{ kamp.id }}" class="form-control form-control-sm" min="0" onchange="updateResultFasit({{ kamp.id }})"></td>
+                                <td style="width: 60px;"><input type="number" name="res_home_{{ kamp.id }}" id="res_home_{{ kamp.id }}" class="form-control form-control-sm" min="0" value="{{ eksisterende_resultater[kamp.id].mål_hjemme if kamp.id in eksisterende_resultater else '' }}" onchange="updateResultFasit({{ kamp.id }})"></td>
+                                <td style="width: 60px;"><input type="number" name="res_away_{{ kamp.id }}" id="res_away_{{ kamp.id }}" class="form-control form-control-sm" min="0" value="{{ eksisterende_resultater[kamp.id].mål_borte if kamp.id in eksisterende_resultater else '' }}" onchange="updateResultFasit({{ kamp.id }})"></td>
                                 <td style="width: 100px;">
                                     <select name="res_result_{{ kamp.id }}" id="res_result_{{ kamp.id }}" class="form-select form-select-sm" style="background-color: #e9ecef; pointer-events: none;">
                                         <option value="">-</option>
-                                        <option value="H">H</option>
-                                        <option value="U">U</option>
-                                        <option value="B">B</option>
+                                        <option value="H" {% if kamp.id in eksisterende_resultater and eksisterende_resultater[kamp.id].resultat == 'H' %}selected{% endif %}>H</option>
+                                        <option value="U" {% if kamp.id in eksisterende_resultater and eksisterende_resultater[kamp.id].resultat == 'U' %}selected{% endif %}>U</option>
+                                        <option value="B" {% if kamp.id in eksisterende_resultater and eksisterende_resultater[kamp.id].resultat == 'B' %}selected{% endif %}>B</option>
                                     </select>
                                 </td>
                             </tr>
@@ -136,10 +136,10 @@
                                         onchange="validateFasitPositions('{{ gruppe_navn }}')"
                                         style="width: 80px; font-size: 0.9em;">
                                     <option value="">Velg</option>
-                                    <option value="1">1.</option>
-                                    <option value="2">2.</option>
-                                    <option value="3">3.</option>
-                                    <option value="4">4.</option>
+                                    <option value="1" {% if gruppe_navn in eksisterende_gruppefasit and lag[0] in eksisterende_gruppefasit[gruppe_navn] and eksisterende_gruppefasit[gruppe_navn][lag[0]] == 1 %}selected{% endif %}>1.</option>
+                                    <option value="2" {% if gruppe_navn in eksisterende_gruppefasit and lag[0] in eksisterende_gruppefasit[gruppe_navn] and eksisterende_gruppefasit[gruppe_navn][lag[0]] == 2 %}selected{% endif %}>2.</option>
+                                    <option value="3" {% if gruppe_navn in eksisterende_gruppefasit and lag[0] in eksisterende_gruppefasit[gruppe_navn] and eksisterende_gruppefasit[gruppe_navn][lag[0]] == 3 %}selected{% endif %}>3.</option>
+                                    <option value="4" {% if gruppe_navn in eksisterende_gruppefasit and lag[0] in eksisterende_gruppefasit[gruppe_navn] and eksisterende_gruppefasit[gruppe_navn][lag[0]] == 4 %}selected{% endif %}>4.</option>
                                 </select>
                             </div>
                             {% endfor %}

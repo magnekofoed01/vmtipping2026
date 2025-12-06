@@ -615,7 +615,26 @@ def resultater():
         conn.commit()
         conn.close()
         return redirect('/resultater')
-    return render_template('resultater.html', kamper=kamper, grupper=grupper)
+    
+    # Hent eksisterende resultater fra database
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat, dato FROM resultater')
+    eksisterende_resultater = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3], "dato": row[4]} for row in c.fetchall()}
+    
+    # Hent eksisterende gruppefasit
+    c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
+    eksisterende_gruppefasit = {}
+    for gruppe, lag, plassering in c.fetchall():
+        if gruppe not in eksisterende_gruppefasit:
+            eksisterende_gruppefasit[gruppe] = {}
+        eksisterende_gruppefasit[gruppe][lag] = plassering
+    
+    conn.close()
+    
+    return render_template('resultater.html', kamper=kamper, grupper=grupper, 
+                         eksisterende_resultater=eksisterende_resultater,
+                         eksisterende_gruppefasit=eksisterende_gruppefasit)
 
 @app.route('/poeng', methods=['GET', 'POST'])
 def poeng():
