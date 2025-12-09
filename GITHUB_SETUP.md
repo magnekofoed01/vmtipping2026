@@ -60,7 +60,7 @@ Når repositoryet er pushet til GitHub, følg **DEPLOY.md** for å deploye appen
 4. Velg `vmtipping2026` repositoryet
 5. Konfigurer:
    - **Name:** vmtipping2026
-   - **Environment:** Python 3
+   - **Environment:** Python 3n
    - **Build Command:** `pip install -r requirements.txt`
    - **Start Command:** `gunicorn app:app`
 6. Klikk "Create Web Service"

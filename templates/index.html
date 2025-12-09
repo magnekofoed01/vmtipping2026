@@ -6,8 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>VM 2026 Tipping v3.0</title>
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}?v=3">
+    <title>VM 2026 Tipping v3.1</title>
+    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}?v=3.1">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/lipis/flag-icons@7.0.0/css/flag-icons.min.css"/>
     <style>
@@ -34,6 +34,26 @@
         .fi {
             margin-right: 6px;
             border-radius: 2px;
+        }
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
         }
     </style>
 </head>
@@ -74,11 +94,28 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="mb-0">Tipp kamper</h3>
                     <div>
-                        <button type="button" class="btn btn-warning btn-sm me-2" onclick="randomTips()">
-                            🎲 Tilfeldig tipping
-                        </button>
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="clearAllTips()">
-                            🗑️ Nullstill alle
+                        <div class="mb-2">
+                            <strong>🎲 Tilfeldig tipping:</strong>
+                        </div>
+                        <div class="btn-group me-2 mb-2" role="group">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="randomTips('fifa')" title="Basert på FIFA ranking">
+                                ⭐ FIFA
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="randomTips('random')" title="Helt tilfeldig 0-3 mål">
+                                🎯 Tilfeldig
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="randomTips('home')" title="Hjemmelaget får fordel">
+                                🏠 Hjemme
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="randomTips('shock')" title="Store seire eller overraskelser">
+                                💥 Sjokk
+                            </button>
+                            <button type="button" class="btn btn-primary btn-sm" onclick="randomTips('draw')" title="Mange uavgjort">
+                                🤝 Uavgjort
+                            </button>
+                        </div>
+                        <button type="button" class="btn btn-secondary btn-sm mb-2" onclick="clearAllTips()">
+                            🗑️ Nullstill
                         </button>
                     </div>
                 </div>
@@ -195,7 +232,7 @@
 </div>
 
 <script>
-console.log('✅ JavaScript loaded - version 3.0 - CACHE CLEARED - Columns Fixed: cells[3] and cells[4]');
+console.log('✅ JavaScript loaded - version 3.1 - DROPDOWN FIXED - Button onclick handlers');
 
 // Gruppe data - mapping av gruppe til lag
 const gruppeData = {
@@ -347,7 +384,8 @@ function calculateGroupStandings(gruppeNavn) {
 function calculateAllGroups() {
     const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
     grupper.forEach(gruppe => calculateGroupStandings(gruppe));
-    alert('✅ Alle gruppetabeller er beregnet!');
+    
+    showToast('✅ Alle gruppetabeller er beregnet!');
 }
 
 // FIFA Rankings (approximert basert på FIFA ranking og siste resultater)
@@ -367,13 +405,11 @@ const teamRankings = {
     "England": 4, "Kroatia": 9, "Ghana": 58, "Panama": 52
 };
 
-function randomTips() {
-    console.log('=== Starter tilfeldig tipping ===');
-    // Generer tilfeldige resultater for alle kamper
+function randomTips(mode = 'fifa') {
+    console.log(`=== Starter tilfeldig tipping - Modus: ${mode} ===`);
     const rows = document.querySelectorAll('tbody tr');
     
     rows.forEach((row, index) => {
-        // Finn input-feltene i denne raden
         const homeInput = row.querySelector('input[name^="home_"]');
         const awayInput = row.querySelector('input[name^="away_"]');
         
@@ -382,52 +418,105 @@ function randomTips() {
             return;
         }
         
-        // Hent kamp ID fra input name (f.eks. "home_1" -> 1)
         const kampId = homeInput.name.replace('home_', '');
-        
-        // Hent lagnavn fra tabellen - normaliser whitespace
         const cells = row.querySelectorAll('td');
         const homeTeam = cells[3].textContent.replace(/\s+/g, ' ').trim();
         const awayTeam = cells[4].textContent.replace(/\s+/g, ' ').trim();
         
-        // Hent rankings (lavere tall = bedre lag)
         const homeRanking = teamRankings[homeTeam] || 50;
         const awayRanking = teamRankings[awayTeam] || 50;
         
-        // Debug logging
-        if (index < 3) {
-            console.log(`Kamp ${kampId}: "${homeTeam}" (${homeRanking}) vs "${awayTeam}" (${awayRanking})`);
-            console.log(`  Home input: name="${homeInput.name}", id="${homeInput.id}"`);
-            console.log(`  Away input: name="${awayInput.name}", id="${awayInput.id}"`);
-        }
-        
-        // Beregn sannsynlighet basert på ranking
-        const rankingDiff = awayRanking - homeRanking;
-        const homeAdvantage = 5; // Hjemmebane fordel
-        
         let homeGoals, awayGoals;
         
-        // Bedre lag får høyere sannsynlighet for flere mål
-        if (rankingDiff > 20) {
-            // Hjemmelaget er klart bedre
-            homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-            awayGoals = Math.floor(Math.random() * 2); // 0-1
-        } else if (rankingDiff < -20) {
-            // Bortelaget er klart bedre
-            homeGoals = Math.floor(Math.random() * 2); // 0-1
-            awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-        } else if (rankingDiff > 5) {
-            // Hjemmelaget litt bedre
-            homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-            awayGoals = Math.floor(Math.random() * 3); // 0-2
-        } else if (rankingDiff < -5) {
-            // Bortelaget litt bedre
-            homeGoals = Math.floor(Math.random() * 3); // 0-2
-            awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+        if (mode === 'random') {
+            // Helt tilfeldig - alle lag like gode
+            homeGoals = Math.floor(Math.random() * 4); // 0-3
+            awayGoals = Math.floor(Math.random() * 4); // 0-3
+            
+        } else if (mode === 'home') {
+            // Hjemmebanefordel - hjemmelaget får boost
+            const homeBoost = 15; // Ekstra fordel
+            const adjustedDiff = awayRanking - homeRanking + homeBoost;
+            
+            if (adjustedDiff > 15) {
+                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+                awayGoals = Math.floor(Math.random() * 2); // 0-1
+            } else if (adjustedDiff > 0) {
+                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+                awayGoals = Math.floor(Math.random() * 3); // 0-2
+            } else {
+                homeGoals = Math.floor(Math.random() * 3); // 0-2
+                awayGoals = Math.floor(Math.random() * 3); // 0-2
+            }
+            
+        } else if (mode === 'shock') {
+            // Favoritt-sjokkresultat - enten stor seier eller overraskende tap
+            const rankingDiff = awayRanking - homeRanking;
+            const shock = Math.random() < 0.3; // 30% sjanse for sjokk
+            
+            if (Math.abs(rankingDiff) > 20) {
+                // Klar favoritt
+                if (rankingDiff > 0) {
+                    // Hjemmelaget favoritt
+                    if (shock) {
+                        homeGoals = 0; awayGoals = Math.floor(Math.random() * 2) + 2; // Borte vinner 2-3
+                    } else {
+                        homeGoals = Math.floor(Math.random() * 2) + 2; awayGoals = 0; // Hjemme vinner stort
+                    }
+                } else {
+                    // Bortelaget favoritt
+                    if (shock) {
+                        homeGoals = Math.floor(Math.random() * 2) + 2; awayGoals = 0; // Hjemme vinner overraskende
+                    } else {
+                        homeGoals = 0; awayGoals = Math.floor(Math.random() * 2) + 2; // Borte vinner stort
+                    }
+                }
+            } else {
+                homeGoals = Math.floor(Math.random() * 3); // 0-2
+                awayGoals = Math.floor(Math.random() * 3); // 0-2
+            }
+            
+        } else if (mode === 'draw') {
+            // Jevne kamper - mange uavgjort og små marginer
+            const drawChance = Math.random();
+            
+            if (drawChance < 0.5) {
+                // 50% sjanse for uavgjort
+                const score = Math.floor(Math.random() * 3); // 0-2
+                homeGoals = score;
+                awayGoals = score;
+            } else {
+                // Ellers 1-måls margin
+                const base = Math.floor(Math.random() * 3); // 0-2
+                if (Math.random() < 0.5) {
+                    homeGoals = base + 1;
+                    awayGoals = base;
+                } else {
+                    homeGoals = base;
+                    awayGoals = base + 1;
+                }
+            }
+            
         } else {
-            // Jevne lag
-            homeGoals = Math.floor(Math.random() * 3); // 0-2
-            awayGoals = Math.floor(Math.random() * 3); // 0-2
+            // FIFA ranking (standard)
+            const rankingDiff = awayRanking - homeRanking;
+            
+            if (rankingDiff > 20) {
+                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+                awayGoals = Math.floor(Math.random() * 2); // 0-1
+            } else if (rankingDiff < -20) {
+                homeGoals = Math.floor(Math.random() * 2); // 0-1
+                awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+            } else if (rankingDiff > 5) {
+                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+                awayGoals = Math.floor(Math.random() * 3); // 0-2
+            } else if (rankingDiff < -5) {
+                homeGoals = Math.floor(Math.random() * 3); // 0-2
+                awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
+            } else {
+                homeGoals = Math.floor(Math.random() * 3); // 0-2
+                awayGoals = Math.floor(Math.random() * 3); // 0-2
+            }
         }
         
         homeInput.value = homeGoals;
@@ -435,12 +524,60 @@ function randomTips() {
         updateResult(parseInt(kampId));
     });
     
-    // Beregn gruppetabeller automatisk etter random tipping
     calculateAllGroups();
     
-    alert('🎲 Tilfeldige tips generert basert på FIFA-ranking!');
+    const messages = {
+        'fifa': '⭐ Tips generert basert på FIFA-ranking',
+        'random': '🎯 Helt tilfeldige tips generert',
+        'home': '🏠 Tips med hjemmebanefordel generert',
+        'shock': '💥 Tips med sjokkresultater generert',
+        'draw': '🤝 Jevne kamper med mange uavgjort generert'
+    };
+    
+    showToast(messages[mode] || '🎲 Tilfeldige tips generert');
 }
 console.log('✅ randomTips function defined');
+
+function showToast(message, type = 'success') {
+    const colors = {
+        'success': '#28a745',
+        'warning': '#ffc107',
+        'error': '#dc3545',
+        'info': '#17a2b8'
+    };
+    
+    const textColors = {
+        'success': 'white',
+        'warning': '#000',
+        'error': 'white',
+        'info': 'white'
+    };
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast-notification';
+    toast.textContent = message;
+    toast.style.cssText = `
+        position: fixed;
+        top: 80px;
+        right: 20px;
+        background-color: ${colors[type] || colors.success};
+        color: ${textColors[type] || textColors.success};
+        padding: 15px 25px;
+        border-radius: 5px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 9999;
+        font-size: 16px;
+        font-weight: 500;
+        animation: slideIn 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease-in';
+        setTimeout(() => document.body.removeChild(toast), 300);
+    }, 3000);
+}
 
 function clearAllTips() {
     if (!confirm('🗑️ Er du sikker på at du vil nullstille alle tips?')) {
@@ -481,7 +618,7 @@ function clearAllTips() {
         });
     });
     
-    alert('✅ Alle tips er nullstilt!');
+    showToast('✅ Alle tips er nullstilt!');
 }
 
 function validateGroupPositions(gruppeNavn) {
@@ -533,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (hasErrors) {
                 e.preventDefault();
-                alert('⚠️ Feil: Hvert lag i en gruppe må ha unik plassering (1-4). Sjekk de røde feltene.');
+                showToast('⚠️ Feil: Hvert lag i en gruppe må ha unik plassering (1-4). Sjekk de røde feltene.', 'warning');
                 return false;
             }
         });
