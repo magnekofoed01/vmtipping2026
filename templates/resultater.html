@@ -41,7 +41,6 @@
             <a class="nav-link text-white d-inline" href="/regler">Regler</a>
             <a class="nav-link text-white d-inline" href="/poeng">Poengoversikt</a>
             <a class="nav-link text-warning d-inline" href="/administrer">⚙️ Admin</a>
-            <a class="btn btn-outline-danger btn-sm" href="/admin-logout">🔓 Logg ut</a>
         </div>
     </div>
 </nav>
@@ -80,16 +79,20 @@
                                     </span>
                                 </td>
                                 <td>
-                                    {% if kamp.hjemmelag[1] %}
-                                    <span class="fi fi-{{ kamp.hjemmelag[1] }}"></span>
+                                    {% if kamp.hjemmelag is string %}
+                                        {{ kamp.hjemmelag }}
+                                    {% else %}
+                                        {% if kamp.hjemmelag[1] %}<span class="fi fi-{{ kamp.hjemmelag[1] }}"></span>{% endif %}
+                                        {{ kamp.hjemmelag[0] }}
                                     {% endif %}
-                                    {{ kamp.hjemmelag[0] }}
                                 </td>
                                 <td>
-                                    {% if kamp.bortelag[1] %}
-                                    <span class="fi fi-{{ kamp.bortelag[1] }}"></span>
+                                    {% if kamp.bortelag is string %}
+                                        {{ kamp.bortelag }}
+                                    {% else %}
+                                        {% if kamp.bortelag[1] %}<span class="fi fi-{{ kamp.bortelag[1] }}"></span>{% endif %}
+                                        {{ kamp.bortelag[0] }}
                                     {% endif %}
-                                    {{ kamp.bortelag[0] }}
                                 </td>
                                 <td style="width: 60px;"><input type="number" name="res_home_{{ kamp.id }}" id="res_home_{{ kamp.id }}" class="form-control form-control-sm" min="0" value="{{ eksisterende_resultater[kamp.id].mål_hjemme if kamp.id in eksisterende_resultater else '' }}" onchange="updateResultFasit({{ kamp.id }})"></td>
                                 <td style="width: 60px;"><input type="number" name="res_away_{{ kamp.id }}" id="res_away_{{ kamp.id }}" class="form-control form-control-sm" min="0" value="{{ eksisterende_resultater[kamp.id].mål_borte if kamp.id in eksisterende_resultater else '' }}" onchange="updateResultFasit({{ kamp.id }})"></td>

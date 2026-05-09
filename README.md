@@ -11,6 +11,23 @@ En Flask-basert tippingsapplikasjon for VM 2026 med kampresultater, poengberegni
 - 🎖️ **Dagsvinner** - Premie til beste tipper hver dag
 - ⚙️ **Administrasjon** - Enkel administrasjon av kamper og resultater
 
+## 🌍 Gruppeoversikt VM 2026
+
+| Gruppe | Lag |
+|--------|-----|
+| **A** | Mexico, Sør-Afrika, Sør-Korea, Tsjekkia |
+| **B** | Canada, Bosnia-Hercegovina, Qatar, Sveits |
+| **C** | Brasil, Marokko, Haiti, Skottland |
+| **D** | USA, Paraguay, Australia, Tyrkia |
+| **E** | Tyskland, Curaçao, Elfenbenskysten, Ecuador |
+| **F** | Nederland, Japan, Sverige, Tunisia |
+| **G** | Belgia, Egypt, Iran, New Zealand |
+| **H** | Spania, Kapp Verde, Saudi-Arabia, Uruguay |
+| **I** | Frankrike, Senegal, Irak, Norge |
+| **J** | Argentina, Algerie, Østerrike, Jordan |
+| **K** | Portugal, DR Kongo, Usbekistan, Colombia |
+| **L** | England, Kroatia, Ghana, Panama |
+
 ## 🚀 Kom i gang
 
 ### Forutsetninger

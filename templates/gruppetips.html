@@ -46,6 +46,9 @@
 </nav>
 <div class="container">
     <h1 class="mb-4">Tipp gruppeplasseringer - VM 2026</h1>
+    {% if melding %}
+    <div class="alert alert-success">{{ melding }}</div>
+    {% endif %}
     <div class="alert alert-info">
         <strong>Regler:</strong> Tipp plasseringen (1-4) for hvert lag i hver gruppe. 
         Riktig plassering gir <strong>3 poeng</strong> per lag.

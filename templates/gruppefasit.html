@@ -54,7 +54,7 @@
         <strong>Administrator:</strong> Her legger du inn de endelige plasseringene etter at alle gruppekampene er spilt.
     </div>
     
-    <form method="POST" class="card p-4 shadow-sm">
+    <form method="POST" action="/gruppefasit" class="card p-4 shadow-sm">
         <h3 class="mt-4 mb-3">Endelige plasseringer</h3>
         <div class="row">
             {% for gruppe_navn, lag_liste in grupper.items() %}

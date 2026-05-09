@@ -1,350 +1,227 @@
-# -*- coding: utf-8 -*-
-from flask import Flask, render_template, request, redirect, session, send_from_directory
+from flask import Flask, render_template, request, redirect
 import sqlite3
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-import os
 
 app = Flask(__name__)
-app.secret_key = 'vm2026-super-secret-key-change-this-in-production'
 DB_FILE = 'tips.db'
 
-# Admin passord (endre dette til et sikkert passord)
-ADMIN_PASSWORD = '2026tippingvm'
-
-# ----------------------
-# INITIALISER DATABASE
-# ----------------------
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS tips (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        navn TEXT,
-        telefon TEXT,
-        epost TEXT,
-        kamp_id INTEGER,
-        hjemmelag TEXT,
-        bortelag TEXT,
-        mål_hjemme INTEGER,
-        mål_borte INTEGER,
-        resultat TEXT
+        navn TEXT, telefon TEXT, epost TEXT, kamp_id INTEGER,
+        hjemmelag TEXT, bortelag TEXT, mål_hjemme INTEGER, mål_borte INTEGER, resultat TEXT
     )''')
     c.execute('''CREATE TABLE IF NOT EXISTS resultater (
-        kamp_id INTEGER PRIMARY KEY,
-        hjemmelag TEXT,
-        bortelag TEXT,
-        mål_hjemme INTEGER,
-        mål_borte INTEGER,
-        resultat TEXT,
-        dato DATE
+        kamp_id INTEGER PRIMARY KEY, hjemmelag TEXT, bortelag TEXT,
+        mål_hjemme INTEGER, mål_borte INTEGER, resultat TEXT, dato DATE
     )''')
-    
-    # Ny tabell for gruppetips
+    c.execute('''CREATE TABLE IF NOT EXISTS gruppefasit (
+        gruppe TEXT, lag TEXT, plassering INTEGER, PRIMARY KEY (gruppe, lag)
+    )''')
     c.execute('''CREATE TABLE IF NOT EXISTS gruppetips (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        navn TEXT,
-        telefon TEXT,
-        epost TEXT,
-        gruppe TEXT,
-        lag TEXT,
-        plassering INTEGER
+        navn TEXT, telefon TEXT, epost TEXT, gruppe TEXT, lag TEXT, plassering INTEGER
     )''')
-    
-    # Ny tabell for gruppefasit (endelig plassering)
-    c.execute('''CREATE TABLE IF NOT EXISTS gruppefasit (
-        gruppe TEXT,
-        lag TEXT,
-        plassering INTEGER,
-        PRIMARY KEY (gruppe, lag)
+    c.execute('''CREATE TABLE IF NOT EXISTS sluttspilltips (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        navn TEXT, telefon TEXT, epost TEXT, fase TEXT, lag TEXT
     )''')
-    
-    # Sjekk om dato-kolonnen eksisterer, hvis ikke legg den til
+    c.execute('''CREATE TABLE IF NOT EXISTS sluttspillfasit (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        fase TEXT, lag TEXT, UNIQUE(fase, lag)
+    )''')
     c.execute("PRAGMA table_info(resultater)")
     columns = [column[1] for column in c.fetchall()]
     if 'dato' not in columns:
         try:
             c.execute('ALTER TABLE resultater ADD COLUMN dato DATE')
-            print("✅ Lagt til 'dato'-kolonne i resultater-tabellen")
         except Exception as e:
             print(f"⚠️ Kunne ikke legge til dato-kolonne: {e}")
-    
     conn.commit()
     conn.close()
 
 init_db()
 
-# VM 2026 - 12 Grupper med 4 lag i hver gruppe (48 lag totalt)
-# Reelle grupper fra FIFA-trekningen 5. desember 2025
-# Format: (landsnavn, landskode for flagg)
-grupper = {
-    "A": [("Mexico", "mx"), ("Sør-Afrika", "za"), ("Sør-Korea", "kr"), ("UEFA PO D", None)],
-    "B": [("Canada", "ca"), ("Qatar", "qa"), ("Sveits", "ch"), ("UEFA PO A", None)],
-    "C": [("Brasil", "br"), ("Marokko", "ma"), ("Haiti", "ht"), ("Skottland", "gb-sct")],
-    "D": [("USA", "us"), ("Paraguay", "py"), ("Australia", "au"), ("UEFA PO C", None)],
-    "E": [("Tyskland", "de"), ("Curaçao", "cw"), ("Elfenbenskysten", "ci"), ("Ecuador", "ec")],
-    "F": [("Nederland", "nl"), ("Japan", "jp"), ("UEFA PO B", None), ("Tunisia", "tn")],
-    "G": [("Belgia", "be"), ("Egypt", "eg"), ("Iran", "ir"), ("New Zealand", "nz")],
-    "H": [("Spania", "es"), ("Kapp Verde", "cv"), ("Saudi-Arabia", "sa"), ("Uruguay", "uy")],
-    "I": [("Frankrike", "fr"), ("Senegal", "sn"), ("Norge", "no"), ("FIFA PO 2", None)],
-    "J": [("Argentina", "ar"), ("Algerie", "dz"), ("Østerrike", "at"), ("Jordan", "jo")],
-    "K": [("Portugal", "pt"), ("FIFA PO 1", None), ("Usbekistan", "uz"), ("Colombia", "co")],
-    "L": [("England", "gb-eng"), ("Kroatia", "hr"), ("Ghana", "gh"), ("Panama", "pa")]
+flagg = {
+    "Mexico": "mx", "Sør-Afrika": "za", "Sør-Korea": "kr", "Tsjekkia": "cz",
+    "Canada": "ca", "Bosnia-Hercegovina": "ba", "Qatar": "qa", "Sveits": "ch",
+    "Brasil": "br", "Marokko": "ma", "Haiti": "ht", "Skottland": "gb-sct",
+    "USA": "us", "Paraguay": "py", "Australia": "au", "Tyrkia": "tr",
+    "Tyskland": "de", "Curaçao": "cw", "Elfenbenskysten": "ci", "Ecuador": "ec",
+    "Nederland": "nl", "Japan": "jp", "Sverige": "se", "Tunisia": "tn",
+    "Belgia": "be", "Egypt": "eg", "Iran": "ir", "New Zealand": "nz",
+    "Spania": "es", "Kapp Verde": "cv", "Saudi-Arabia": "sa", "Uruguay": "uy",
+    "Frankrike": "fr", "Senegal": "sn", "Irak": "iq", "Norge": "no",
+    "Argentina": "ar", "Algerie": "dz", "Østerrike": "at", "Jordan": "jo",
+    "Portugal": "pt", "DR Kongo": "cd", "Usbekistan": "uz", "Colombia": "co",
+    "England": "gb-eng", "Kroatia": "hr", "Ghana": "gh", "Panama": "pa"
 }
 
-# Generer alle gruppekamper (6 kamper per gruppe = 72 gruppekamper totalt)
-# VM 2026 gruppespill: 12. juni - 27. juni 2026
-# Offisielt kampoppsett fra FIFA med spesifikke datoer og rekkefølge
+grupper = {
+    "A": ["Mexico", "Sør-Afrika", "Sør-Korea", "Tsjekkia"],
+    "B": ["Canada", "Bosnia-Hercegovina", "Qatar", "Sveits"],
+    "C": ["Brasil", "Marokko", "Haiti", "Skottland"],
+    "D": ["USA", "Paraguay", "Australia", "Tyrkia"],
+    "E": ["Tyskland", "Curaçao", "Elfenbenskysten", "Ecuador"],
+    "F": ["Nederland", "Japan", "Sverige", "Tunisia"],
+    "G": ["Belgia", "Egypt", "Iran", "New Zealand"],
+    "H": ["Spania", "Kapp Verde", "Saudi-Arabia", "Uruguay"],
+    "I": ["Frankrike", "Senegal", "Irak", "Norge"],
+    "J": ["Argentina", "Algerie", "Østerrike", "Jordan"],
+    "K": ["Portugal", "DR Kongo", "Usbekistan", "Colombia"],
+    "L": ["England", "Kroatia", "Ghana", "Panama"]
+}
+
+grupper_med_flagg = {
+    gruppe: [(lag, flagg.get(lag, "")) for lag in lag_liste]
+    for gruppe, lag_liste in grupper.items()
+}
+
+kampdata = {
+    ("Mexico", "Sør-Afrika"): "2026-06-11",
+    ("Sør-Korea", "Tsjekkia"): "2026-06-12",
+    ("Tsjekkia", "Sør-Afrika"): "2026-06-18",
+    ("Mexico", "Sør-Korea"): "2026-06-19",
+    ("Tsjekkia", "Mexico"): "2026-06-25",
+    ("Sør-Afrika", "Sør-Korea"): "2026-06-25",
+    ("Canada", "Bosnia-Hercegovina"): "2026-06-12",
+    ("Qatar", "Sveits"): "2026-06-13",
+    ("Sveits", "Bosnia-Hercegovina"): "2026-06-18",
+    ("Canada", "Qatar"): "2026-06-19",
+    ("Sveits", "Canada"): "2026-06-24",
+    ("Bosnia-Hercegovina", "Qatar"): "2026-06-24",
+    ("Brasil", "Marokko"): "2026-06-14",
+    ("Haiti", "Skottland"): "2026-06-14",
+    ("Skottland", "Marokko"): "2026-06-20",
+    ("Brasil", "Haiti"): "2026-06-20",
+    ("Skottland", "Brasil"): "2026-06-25",
+    ("Marokko", "Haiti"): "2026-06-25",
+    ("USA", "Paraguay"): "2026-06-13",
+    ("Australia", "Tyrkia"): "2026-06-14",
+    ("USA", "Australia"): "2026-06-19",
+    ("Tyrkia", "Paraguay"): "2026-06-20",
+    ("Tyrkia", "USA"): "2026-06-26",
+    ("Paraguay", "Australia"): "2026-06-26",
+    ("Tyskland", "Curaçao"): "2026-06-14",
+    ("Elfenbenskysten", "Ecuador"): "2026-06-15",
+    ("Tyskland", "Elfenbenskysten"): "2026-06-20",
+    ("Ecuador", "Curaçao"): "2026-06-21",
+    ("Curaçao", "Elfenbenskysten"): "2026-06-25",
+    ("Ecuador", "Tyskland"): "2026-06-25",
+    ("Nederland", "Japan"): "2026-06-14",
+    ("Sverige", "Tunisia"): "2026-06-15",
+    ("Nederland", "Sverige"): "2026-06-20",
+    ("Tunisia", "Japan"): "2026-06-21",
+    ("Japan", "Sverige"): "2026-06-26",
+    ("Tunisia", "Nederland"): "2026-06-26",
+    ("Belgia", "Egypt"): "2026-06-15",
+    ("Iran", "New Zealand"): "2026-06-16",
+    ("Belgia", "Iran"): "2026-06-21",
+    ("New Zealand", "Egypt"): "2026-06-22",
+    ("Egypt", "Iran"): "2026-06-27",
+    ("New Zealand", "Belgia"): "2026-06-27",
+    ("Spania", "Kapp Verde"): "2026-06-15",
+    ("Saudi-Arabia", "Uruguay"): "2026-06-16",
+    ("Spania", "Saudi-Arabia"): "2026-06-21",
+    ("Uruguay", "Kapp Verde"): "2026-06-22",
+    ("Kapp Verde", "Saudi-Arabia"): "2026-06-27",
+    ("Uruguay", "Spania"): "2026-06-27",
+    ("Frankrike", "Senegal"): "2026-06-16",
+    ("Irak", "Norge"): "2026-06-17",
+    ("Frankrike", "Irak"): "2026-06-22",
+    ("Norge", "Senegal"): "2026-06-23",
+    ("Norge", "Frankrike"): "2026-06-26",
+    ("Senegal", "Irak"): "2026-06-26",
+    ("Argentina", "Algerie"): "2026-06-17",
+    ("Østerrike", "Jordan"): "2026-06-17",
+    ("Argentina", "Østerrike"): "2026-06-22",
+    ("Jordan", "Algerie"): "2026-06-23",
+    ("Jordan", "Argentina"): "2026-06-28",
+    ("Algerie", "Østerrike"): "2026-06-28",
+    ("Portugal", "DR Kongo"): "2026-06-17",
+    ("Usbekistan", "Colombia"): "2026-06-18",
+    ("Portugal", "Usbekistan"): "2026-06-23",
+    ("Colombia", "DR Kongo"): "2026-06-24",
+    ("Colombia", "Portugal"): "2026-06-28",
+    ("DR Kongo", "Usbekistan"): "2026-06-28",
+    ("England", "Kroatia"): "2026-06-17",
+    ("Ghana", "Panama"): "2026-06-18",
+    ("England", "Ghana"): "2026-06-23",
+    ("Panama", "Kroatia"): "2026-06-24",
+    ("Panama", "England"): "2026-06-27",
+    ("Kroatia", "Ghana"): "2026-06-27",
+}
+
+sluttspill_datoer = {
+    "8-delsfinale": ["2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01",
+                     "2026-07-02", "2026-07-03", "2026-07-04", "2026-07-04"],
+    "Kvartfinale": ["2026-07-09", "2026-07-10", "2026-07-11", "2026-07-12"],
+    "Semifinale": ["2026-07-14", "2026-07-15"],
+    "Bronsefinale": ["2026-07-18"],
+    "Finale": ["2026-07-19"],
+}
+
 kamper = []
 kamp_id = 1
 
-# Definerer alle gruppekamper manuelt basert på offisielt VM-program
-# Dette sikrer korrekte datoer og at ingen lag spiller 2 kamper samme dag
+for gruppe_navn, lag in grupper.items():
+    for i in range(len(lag)):
+        for j in range(i + 1, len(lag)):
+            h = lag[i]
+            b = lag[j]
+            dato = kampdata.get((h, b)) or kampdata.get((b, h))
+            kamper.append({
+                "id": kamp_id, "fase": "Gruppespill", "gruppe": gruppe_navn,
+                "hjemmelag": (h, flagg.get(h, "")), "bortelag": (b, flagg.get(b, "")), "dato": dato
+            })
+            kamp_id += 1
 
-# GRUPPE A - 12/06, 16/06, 21/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "A", "hjemmelag": grupper["A"][0], "bortelag": grupper["A"][2], "dato": "2026-06-12"},  # Mexico vs Sør-Afrika
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "A", "hjemmelag": grupper["A"][1], "bortelag": grupper["A"][3], "dato": "2026-06-12"},  # Sør-Korea vs Vinner UEFA PO D
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "A", "hjemmelag": grupper["A"][0], "bortelag": grupper["A"][1], "dato": "2026-06-16"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "A", "hjemmelag": grupper["A"][2], "bortelag": grupper["A"][3], "dato": "2026-06-16"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "A", "hjemmelag": grupper["A"][0], "bortelag": grupper["A"][3], "dato": "2026-06-21"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "A", "hjemmelag": grupper["A"][1], "bortelag": grupper["A"][2], "dato": "2026-06-21"},
-])
-kamp_id += 6
-
-# GRUPPE B - 12/06, 14/06, 17/06, 22/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "B", "hjemmelag": grupper["B"][0], "bortelag": grupper["B"][3], "dato": "2026-06-12"},  # Canada vs UEFA PO A
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "B", "hjemmelag": grupper["B"][1], "bortelag": grupper["B"][2], "dato": "2026-06-14"},  # Qatar vs Sveits
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "B", "hjemmelag": grupper["B"][0], "bortelag": grupper["B"][1], "dato": "2026-06-17"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "B", "hjemmelag": grupper["B"][2], "bortelag": grupper["B"][3], "dato": "2026-06-17"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "B", "hjemmelag": grupper["B"][0], "bortelag": grupper["B"][2], "dato": "2026-06-22"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "B", "hjemmelag": grupper["B"][1], "bortelag": grupper["B"][3], "dato": "2026-06-22"},
-])
-kamp_id += 6
-
-# GRUPPE C - 13/06, 17/06, 22/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "C", "hjemmelag": grupper["C"][0], "bortelag": grupper["C"][2], "dato": "2026-06-13"},  # Brasil vs Marokko
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "C", "hjemmelag": grupper["C"][1], "bortelag": grupper["C"][3], "dato": "2026-06-13"},  # Haiti vs Skottland
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "C", "hjemmelag": grupper["C"][0], "bortelag": grupper["C"][1], "dato": "2026-06-17"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "C", "hjemmelag": grupper["C"][2], "bortelag": grupper["C"][3], "dato": "2026-06-17"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "C", "hjemmelag": grupper["C"][0], "bortelag": grupper["C"][3], "dato": "2026-06-22"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "C", "hjemmelag": grupper["C"][1], "bortelag": grupper["C"][2], "dato": "2026-06-22"},
-])
-kamp_id += 6
-
-# GRUPPE D - 13/06, 14/06, 18/06, 23/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "D", "hjemmelag": grupper["D"][0], "bortelag": grupper["D"][2], "dato": "2026-06-13"},  # USA vs Paraguay
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "D", "hjemmelag": grupper["D"][1], "bortelag": grupper["D"][3], "dato": "2026-06-14"},  # Australia vs Vinner UEFA PO C
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "D", "hjemmelag": grupper["D"][0], "bortelag": grupper["D"][1], "dato": "2026-06-18"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "D", "hjemmelag": grupper["D"][2], "bortelag": grupper["D"][3], "dato": "2026-06-18"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "D", "hjemmelag": grupper["D"][0], "bortelag": grupper["D"][3], "dato": "2026-06-23"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "D", "hjemmelag": grupper["D"][1], "bortelag": grupper["D"][2], "dato": "2026-06-23"},
-])
-kamp_id += 6
-
-# GRUPPE E - 14/06, 18/06, 23/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "E", "hjemmelag": grupper["E"][2], "bortelag": grupper["E"][3], "dato": "2026-06-14"},  # Elfenbenskysten vs Ecuador
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "E", "hjemmelag": grupper["E"][0], "bortelag": grupper["E"][1], "dato": "2026-06-14"},  # Tyskland vs Curaçao
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "E", "hjemmelag": grupper["E"][0], "bortelag": grupper["E"][2], "dato": "2026-06-18"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "E", "hjemmelag": grupper["E"][1], "bortelag": grupper["E"][3], "dato": "2026-06-18"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "E", "hjemmelag": grupper["E"][0], "bortelag": grupper["E"][3], "dato": "2026-06-23"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "E", "hjemmelag": grupper["E"][1], "bortelag": grupper["E"][2], "dato": "2026-06-23"},
-])
-kamp_id += 6
-
-# GRUPPE F - 14/06, 19/06, 24/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "F", "hjemmelag": grupper["F"][2], "bortelag": grupper["F"][3], "dato": "2026-06-14"},  # UEFA PO B vs Tunisia
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "F", "hjemmelag": grupper["F"][0], "bortelag": grupper["F"][1], "dato": "2026-06-14"},  # Nederland vs Japan
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "F", "hjemmelag": grupper["F"][0], "bortelag": grupper["F"][1], "dato": "2026-06-19"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "F", "hjemmelag": grupper["F"][2], "bortelag": grupper["F"][3], "dato": "2026-06-19"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "F", "hjemmelag": grupper["F"][0], "bortelag": grupper["F"][3], "dato": "2026-06-24"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "F", "hjemmelag": grupper["F"][1], "bortelag": grupper["F"][2], "dato": "2026-06-24"},
-])
-kamp_id += 6
-
-# GRUPPE G - 15/06, 19/06, 24/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "G", "hjemmelag": grupper["G"][2], "bortelag": grupper["G"][3], "dato": "2026-06-15"},  # Iran vs New Zealand
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "G", "hjemmelag": grupper["G"][0], "bortelag": grupper["G"][1], "dato": "2026-06-15"},  # Belgia vs Egypt
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "G", "hjemmelag": grupper["G"][0], "bortelag": grupper["G"][2], "dato": "2026-06-19"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "G", "hjemmelag": grupper["G"][1], "bortelag": grupper["G"][3], "dato": "2026-06-19"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "G", "hjemmelag": grupper["G"][0], "bortelag": grupper["G"][3], "dato": "2026-06-24"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "G", "hjemmelag": grupper["G"][1], "bortelag": grupper["G"][2], "dato": "2026-06-24"},
-])
-kamp_id += 6
-
-# GRUPPE H - 15/06, 20/06, 25/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "H", "hjemmelag": grupper["H"][2], "bortelag": grupper["H"][3], "dato": "2026-06-15"},  # Saudi-Arabia vs Uruguay
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "H", "hjemmelag": grupper["H"][0], "bortelag": grupper["H"][1], "dato": "2026-06-15"},  # Spania vs Kapp Verde
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "H", "hjemmelag": grupper["H"][0], "bortelag": grupper["H"][1], "dato": "2026-06-20"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "H", "hjemmelag": grupper["H"][2], "bortelag": grupper["H"][3], "dato": "2026-06-20"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "H", "hjemmelag": grupper["H"][0], "bortelag": grupper["H"][2], "dato": "2026-06-25"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "H", "hjemmelag": grupper["H"][1], "bortelag": grupper["H"][3], "dato": "2026-06-25"},
-])
-kamp_id += 6
-
-# GRUPPE I - 16/06, 20/06, 25/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "I", "hjemmelag": grupper["I"][3], "bortelag": grupper["I"][2], "dato": "2026-06-16"},  # FIFA PO 2 vs Norge
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "I", "hjemmelag": grupper["I"][0], "bortelag": grupper["I"][1], "dato": "2026-06-16"},  # Frankrike vs Senegal
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "I", "hjemmelag": grupper["I"][0], "bortelag": grupper["I"][3], "dato": "2026-06-20"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "I", "hjemmelag": grupper["I"][1], "bortelag": grupper["I"][2], "dato": "2026-06-20"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "I", "hjemmelag": grupper["I"][0], "bortelag": grupper["I"][2], "dato": "2026-06-25"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "I", "hjemmelag": grupper["I"][3], "bortelag": grupper["I"][1], "dato": "2026-06-25"},
-])
-kamp_id += 6
-
-# GRUPPE J - 16/06, 21/06, 26/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "J", "hjemmelag": grupper["J"][1], "bortelag": grupper["J"][3], "dato": "2026-06-16"},  # Østerrike vs Jordan
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "J", "hjemmelag": grupper["J"][0], "bortelag": grupper["J"][2], "dato": "2026-06-16"},  # Argentina vs Algerie
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "J", "hjemmelag": grupper["J"][0], "bortelag": grupper["J"][1], "dato": "2026-06-21"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "J", "hjemmelag": grupper["J"][2], "bortelag": grupper["J"][3], "dato": "2026-06-21"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "J", "hjemmelag": grupper["J"][0], "bortelag": grupper["J"][3], "dato": "2026-06-26"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "J", "hjemmelag": grupper["J"][1], "bortelag": grupper["J"][2], "dato": "2026-06-26"},
-])
-kamp_id += 6
-
-# GRUPPE K - 17/06, 21/06, 26/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "K", "hjemmelag": grupper["K"][2], "bortelag": grupper["K"][3], "dato": "2026-06-17"},  # Usbekistan vs Colombia
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "K", "hjemmelag": grupper["K"][0], "bortelag": grupper["K"][1], "dato": "2026-06-17"},  # Portugal vs Vinner FIFA PO 1
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "K", "hjemmelag": grupper["K"][0], "bortelag": grupper["K"][2], "dato": "2026-06-21"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "K", "hjemmelag": grupper["K"][1], "bortelag": grupper["K"][3], "dato": "2026-06-21"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "K", "hjemmelag": grupper["K"][0], "bortelag": grupper["K"][3], "dato": "2026-06-26"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "K", "hjemmelag": grupper["K"][1], "bortelag": grupper["K"][2], "dato": "2026-06-26"},
-])
-kamp_id += 6
-
-# GRUPPE L - 17/06, 21/06, 27/06
-kamper.extend([
-    {"id": kamp_id, "fase": "Gruppespill", "gruppe": "L", "hjemmelag": grupper["L"][0], "bortelag": grupper["L"][1], "dato": "2026-06-17"},  # England vs Kroatia
-    {"id": kamp_id+1, "fase": "Gruppespill", "gruppe": "L", "hjemmelag": grupper["L"][2], "bortelag": grupper["L"][3], "dato": "2026-06-17"},  # Ghana vs Panama
-    {"id": kamp_id+2, "fase": "Gruppespill", "gruppe": "L", "hjemmelag": grupper["L"][0], "bortelag": grupper["L"][2], "dato": "2026-06-21"},
-    {"id": kamp_id+3, "fase": "Gruppespill", "gruppe": "L", "hjemmelag": grupper["L"][1], "bortelag": grupper["L"][3], "dato": "2026-06-21"},
-    {"id": kamp_id+4, "fase": "Gruppespill", "gruppe": "L", "hjemmelag": grupper["L"][0], "bortelag": grupper["L"][3], "dato": "2026-06-27"},
-    {"id": kamp_id+5, "fase": "Gruppespill", "gruppe": "L", "hjemmelag": grupper["L"][1], "bortelag": grupper["L"][2], "dato": "2026-06-27"},
-])
-kamp_id += 6
-
-# ----------------------
-# LOGIN OG SIKKERHET
-# ----------------------
-def check_admin():
-    """Sjekk om brukeren er logget inn som admin"""
-    return session.get('admin_logged_in', False)
-
-@app.route('/admin-login', methods=['GET', 'POST'])
-def admin_login():
-    if request.method == 'POST':
-        password = request.form.get('password')
-        if password == ADMIN_PASSWORD:
-            session['admin_logged_in'] = True
-            return redirect(request.args.get('next') or '/administrer')
-        else:
-            return render_template('admin_login.html', error='Feil passord')
-    return render_template('admin_login.html')
-
-@app.route('/admin-logout')
-def admin_logout():
-    session.pop('admin_logged_in', None)
-    return redirect('/')
-
-# SLUTTSPILL - Knockout-runder
-# 16-delsfinale (32 lag, 16 kamper)
-# De to beste fra hver gruppe (24 lag) + 8 beste tredjeplasser = 32 lag
-sluttspill_16delsfinale = [
-    "Vinner A", "Toer B", "Vinner C", "Toer D", "Vinner E", "Toer F", "Vinner G", "Toer H",
-    "Vinner I", "Toer J", "Vinner K", "Toer L", "Toer A", "Vinner B", "Toer C", "Vinner D",
-    "Toer E", "Vinner F", "Toer G", "Vinner H", "Toer I", "Vinner J", "Toer K", "Vinner L",
-    "3.plass A/B/C", "3.plass D/E/F", "3.plass G/H/I", "3.plass J/K/L",
-    "3.plass A/D/G", "3.plass B/E/H", "3.plass C/F/I", "3.plass best"
-]
-
-# 16-delsfinale (16 kamper)
-for i in range(0, 32, 2):
-    kamper.append({
-        "id": kamp_id,
-        "fase": "16-delsfinale",
-        "gruppe": None,
-        "hjemmelag": sluttspill_16delsfinale[i],
-        "bortelag": sluttspill_16delsfinale[i + 1]
-    })
-    kamp_id += 1
-
-# 8-delsfinale / Åttedelsfinale (8 kamper)
 for i in range(1, 9):
     kamper.append({
-        "id": kamp_id,
-        "fase": "8-delsfinale",
-        "gruppe": None,
-        "hjemmelag": f"Vinner 16-delsfinale {i*2-1}",
-        "bortelag": f"Vinner 16-delsfinale {i*2}"
+        "id": kamp_id, "fase": "8-delsfinale", "gruppe": None,
+        "hjemmelag": f"8del_hjemme_{i}", "bortelag": f"8del_borte_{i}",
+        "kamp_nr": i, "dato": sluttspill_datoer["8-delsfinale"][i-1]
     })
     kamp_id += 1
 
-# Kvartfinale (4 kamper)
 for i in range(1, 5):
     kamper.append({
-        "id": kamp_id,
-        "fase": "Kvartfinale",
-        "gruppe": None,
-        "hjemmelag": f"Vinner 8-delsfinale {i*2-1}",
-        "bortelag": f"Vinner 8-delsfinale {i*2}"
+        "id": kamp_id, "fase": "Kvartfinale", "gruppe": None,
+        "hjemmelag": f"kvart_hjemme_{i}", "bortelag": f"kvart_borte_{i}",
+        "kamp_nr": i, "dato": sluttspill_datoer["Kvartfinale"][i-1]
     })
     kamp_id += 1
 
-# Semifinale (2 kamper)
+for i in range(1, 3):
+    kamper.append({
+        "id": kamp_id, "fase": "Semifinale", "gruppe": None,
+        "hjemmelag": f"semi_hjemme_{i}", "bortelag": f"semi_borte_{i}",
+        "kamp_nr": i, "dato": sluttspill_datoer["Semifinale"][i-1]
+    })
+    kamp_id += 1
+
 kamper.append({
-    "id": kamp_id,
-    "fase": "Semifinale",
-    "gruppe": None,
-    "hjemmelag": "Vinner Kvartfinale 1",
-    "bortelag": "Vinner Kvartfinale 2"
+    "id": kamp_id, "fase": "Bronsefinale", "gruppe": None,
+    "hjemmelag": "bronse_hjemme", "bortelag": "bronse_borte",
+    "kamp_nr": 1, "dato": sluttspill_datoer["Bronsefinale"][0]
 })
 kamp_id += 1
 
 kamper.append({
-    "id": kamp_id,
-    "fase": "Semifinale",
-    "gruppe": None,
-    "hjemmelag": "Vinner Kvartfinale 3",
-    "bortelag": "Vinner Kvartfinale 4"
-})
-kamp_id += 1
-
-# Bronsefinale (3.plass)
-kamper.append({
-    "id": kamp_id,
-    "fase": "Bronsefinale",
-    "gruppe": None,
-    "hjemmelag": "Taper Semifinale 1",
-    "bortelag": "Taper Semifinale 2"
-})
-kamp_id += 1
-
-# Finale
-kamper.append({
-    "id": kamp_id,
-    "fase": "Finale",
-    "gruppe": None,
-    "hjemmelag": "Vinner Semifinale 1",
-    "bortelag": "Vinner Semifinale 2"
+    "id": kamp_id, "fase": "Finale", "gruppe": None,
+    "hjemmelag": "finale_hjemme", "bortelag": "finale_borte",
+    "kamp_nr": 1, "dato": sluttspill_datoer["Finale"][0]
 })
 
-# Totalt: 72 gruppekamper + 16 (16-dels) + 8 (8-dels) + 4 (kvart) + 2 (semi) + 1 (bronze) + 1 (finale) = 104 kamper
+alle_lag = []
+for lag_liste in grupper.values():
+    alle_lag.extend(lag_liste)
+sluttspill_alternativer = sorted(alle_lag)
 
-@app.route('/favicon.ico')
-def favicon():
-    return send_from_directory(os.path.join(app.root_path, 'static'),
-                               'favicon.ico', mimetype='image/vnd.microsoft.icon')
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
@@ -354,39 +231,44 @@ def index():
         epost = request.form['epost']
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
-        
-        # Lagre kamptips
+
         for kamp in kamper:
+            if kamp['fase'] != 'Gruppespill':
+                continue
             mål_hjemme = request.form.get(f"home_{kamp['id']}")
             mål_borte = request.form.get(f"away_{kamp['id']}")
             resultat = request.form.get(f"result_{kamp['id']}")
             if mål_hjemme and mål_borte and resultat:
-                hjemmelag_navn = kamp['hjemmelag'][0] if isinstance(kamp['hjemmelag'], tuple) else kamp['hjemmelag']
-                bortelag_navn = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
+                hjemmelag = kamp['hjemmelag'][0] if isinstance(kamp['hjemmelag'], tuple) else kamp['hjemmelag']
+                bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
                 c.execute('INSERT INTO tips (navn, telefon, epost, kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                          (navn, telefon, epost, kamp['id'], hjemmelag_navn, bortelag_navn, mål_hjemme, mål_borte, resultat))
-        
-        # Slett eksisterende gruppetips for denne brukeren
-        c.execute('DELETE FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', 
-                  (navn, telefon, epost))
-        
-        # Lagre gruppetips
+                          (navn, telefon, epost, kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat))
+
         for gruppe_navn, lag_liste in grupper.items():
-            for lag_tuple in lag_liste:
-                lag_navn = lag_tuple[0]
-                plassering = request.form.get(f"gruppe_{gruppe_navn}_{lag_navn}")
+            for lag in lag_liste:
+                plassering = request.form.get(f"gruppe_{gruppe_navn}_{lag}")
                 if plassering:
                     c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
-                              (navn, telefon, epost, gruppe_navn, lag_navn, int(plassering)))
-        
+                              (navn, telefon, epost, gruppe_navn, lag, int(plassering)))
+
+        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2}
+        for fase, antall in fase_antall.items():
+            for i in range(antall):
+                lag = request.form.get(f"sluttspill_{fase}_{i}")
+                if lag:
+                    c.execute('INSERT INTO sluttspilltips (navn, telefon, epost, fase, lag) VALUES (?, ?, ?, ?, ?)',
+                              (navn, telefon, epost, fase, lag))
+
         conn.commit()
         conn.close()
         return redirect('/')
-    return render_template('index.html', kamper=kamper, grupper=grupper)
+    return render_template('index.html', kamper=kamper, grupper=grupper, sluttspill_alternativer=sluttspill_alternativer)
+
 
 @app.route('/regler')
 def regler():
     return render_template('regler.html')
+
 
 @app.route('/deltakere')
 def deltakere():
@@ -394,247 +276,148 @@ def deltakere():
     c = conn.cursor()
     c.execute('SELECT DISTINCT navn, telefon, epost FROM tips')
     unike_deltakere = c.fetchall()
-    
     deltaker_liste = []
     for navn, telefon, epost in unike_deltakere:
-        c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat FROM tips WHERE navn=? AND telefon=? AND epost=?', 
+        c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat FROM tips WHERE navn=? AND telefon=? AND epost=?',
                   (navn, telefon, epost))
         tips = c.fetchall()
-        
-        tips_formatert = []
-        for kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat in tips:
-            tips_formatert.append({
-                'kamp_id': kamp_id,
-                'hjemmelag': hjemmelag,
-                'bortelag': bortelag,
-                'mål_hjemme': mål_hjemme,
-                'mål_borte': mål_borte,
-                'resultat': resultat
-            })
-        
-        deltaker_liste.append({
-            'navn': navn,
-            'telefon': telefon,
-            'epost': epost,
-            'tips': tips_formatert
-        })
-    
+        tips_formatert = [{'kamp_id': t[0], 'hjemmelag': t[1], 'bortelag': t[2],
+                           'mål_hjemme': t[3], 'mål_borte': t[4], 'resultat': t[5]} for t in tips]
+        deltaker_liste.append({'navn': navn, 'telefon': telefon, 'epost': epost, 'tips': tips_formatert})
     conn.close()
     return render_template('deltakere.html', deltakere=deltaker_liste)
 
+
 @app.route('/fasit')
 def fasit():
-    if not check_admin():
-        return redirect('/admin-login?next=/fasit')
-    
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat FROM resultater ORDER BY kamp_id')
+    c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato FROM resultater ORDER BY kamp_id')
     resultater_data = c.fetchall()
     conn.close()
-    
     fasit_liste = []
-    hjemmeseire = 0
-    uavgjort = 0
-    borteseire = 0
-    totalt_mål = 0
-    
-    for kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat in resultater_data:
-        fasit_liste.append({
-            'kamp_id': kamp_id,
-            'hjemmelag': hjemmelag,
-            'bortelag': bortelag,
-            'mål_hjemme': mål_hjemme,
-            'mål_borte': mål_borte,
-            'resultat': resultat
-        })
-        
-        # Beregn statistikk
-        if resultat == 'H':
-            hjemmeseire += 1
-        elif resultat == 'U':
-            uavgjort += 1
-        elif resultat == 'B':
-            borteseire += 1
-        
+    hjemmeseire = uavgjort = borteseire = totalt_mål = 0
+    for kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato in resultater_data:
+        fasit_liste.append({'kamp_id': kamp_id, 'hjemmelag': hjemmelag, 'bortelag': bortelag,
+                            'mål_hjemme': mål_hjemme, 'mål_borte': mål_borte, 'resultat': resultat, 'dato': dato})
+        if resultat == 'H': hjemmeseire += 1
+        elif resultat == 'U': uavgjort += 1
+        elif resultat == 'B': borteseire += 1
         totalt_mål += mål_hjemme + mål_borte
-    
-    statistikk = {
-        'hjemmeseire': hjemmeseire,
-        'uavgjort': uavgjort,
-        'borteseire': borteseire,
-        'totalt_mål': totalt_mål,
-        'gjennomsnitt_mål': totalt_mål / len(fasit_liste) if fasit_liste else 0
-    }
-    
+    statistikk = {'hjemmeseire': hjemmeseire, 'uavgjort': uavgjort, 'borteseire': borteseire,
+                  'totalt_mål': totalt_mål, 'gjennomsnitt_mål': totalt_mål / len(fasit_liste) if fasit_liste else 0}
     return render_template('fasit.html', fasit=fasit_liste, statistikk=statistikk)
+
 
 @app.route('/dagsvinner')
 def dagsvinner():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    
-    # Hent alle unike datoer med resultater
     c.execute('SELECT DISTINCT dato FROM resultater WHERE dato IS NOT NULL ORDER BY dato DESC')
     datoer = [row[0] for row in c.fetchall()]
-    
     dagsvinnere = []
-    
     for dato in datoer:
-        # Hent alle kamper for denne datoen
         c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat FROM resultater WHERE dato = ?', (dato,))
         dagens_kamper = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3]} for row in c.fetchall()}
-        
         if not dagens_kamper:
             continue
-        
-        # Hent alle tips
         c.execute('SELECT navn, telefon, epost, kamp_id, mål_hjemme, mål_borte, resultat FROM tips')
         tips_data = c.fetchall()
-        
-        # Beregn poeng for hver bruker for dagens kamper
         bruker_poeng = {}
         for navn, telefon, epost, kamp_id, mål_hjemme, mål_borte, resultat in tips_data:
             if kamp_id in dagens_kamper:
                 key = (navn, telefon, epost)
                 if key not in bruker_poeng:
                     bruker_poeng[key] = 0
-                
                 res = dagens_kamper[kamp_id]
                 poeng = 0
-                
-                # Poengberegning
-                if resultat == res['resultat']:
-                    poeng += 1
-                if int(mål_hjemme) == res['mål_hjemme'] and int(mål_borte) == res['mål_borte']:
-                    poeng += 2
-                elif int(mål_hjemme) == res['mål_hjemme'] or int(mål_borte) == res['mål_borte']:
-                    poeng += 1
-                
+                if resultat == res['resultat']: poeng += 1
+                if int(mål_hjemme) == res['mål_hjemme'] and int(mål_borte) == res['mål_borte']: poeng += 2
+                elif int(mål_hjemme) == res['mål_hjemme'] or int(mål_borte) == res['mål_borte']: poeng += 1
                 bruker_poeng[key] += poeng
-        
         if bruker_poeng:
-            # Finn dagsvinner (eller flere ved likt poengantall)
             max_poeng = max(bruker_poeng.values())
-            vinnere = [(navn, telefon, epost, poeng) for (navn, telefon, epost), poeng in bruker_poeng.items() if poeng == max_poeng]
-            
-            dagsvinnere.append({
-                'dato': dato,
-                'antall_kamper': len(dagens_kamper),
-                'vinnere': vinnere,
-                'max_poeng': max_poeng
-            })
-    
+            vinnere = [(n, t, e, p) for (n, t, e), p in bruker_poeng.items() if p == max_poeng]
+            dagsvinnere.append({'dato': dato, 'antall_kamper': len(dagens_kamper), 'vinnere': vinnere, 'max_poeng': max_poeng})
     conn.close()
     return render_template('dagsvinner.html', dagsvinnere=dagsvinnere)
 
+
 @app.route('/administrer', methods=['GET', 'POST'])
 def administrer():
-    if not check_admin():
-        return redirect('/admin-login?next=/administrer')
-    
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    
     melding = None
-    
     if request.method == 'POST':
         action = request.form.get('action')
-        
         if action == 'slett_tips':
-            # Slett spesifikke tips basert på navn
             navn = request.form.get('navn')
             telefon = request.form.get('telefon')
             epost = request.form.get('epost')
-            
             if navn and telefon and epost:
                 c.execute('DELETE FROM tips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
                 conn.commit()
                 melding = f"✅ Alle tips for {navn} er slettet!"
             else:
                 melding = "❌ Mangler informasjon for å slette tips."
-        
         elif action == 'slett_alle_tips':
-            # Slett alle tips
             c.execute('DELETE FROM tips')
             conn.commit()
             melding = "✅ Alle tips er slettet!"
-        
         elif action == 'slett_alle_resultater':
-            # Slett alle resultater
             c.execute('DELETE FROM resultater')
             conn.commit()
             melding = "✅ Alle resultater er slettet!"
-    
-    # Hent alle deltakere med antall tips
     c.execute('SELECT navn, telefon, epost, COUNT(*) as antall FROM tips GROUP BY navn, telefon, epost ORDER BY navn')
     deltakere = c.fetchall()
-    
-    # Hent total statistikk
     c.execute('SELECT COUNT(*) FROM tips')
     totalt_tips = c.fetchone()[0]
-    
     c.execute('SELECT COUNT(*) FROM resultater')
     totalt_resultater = c.fetchone()[0]
-    
     conn.close()
-    
-    return render_template('administrer.html', deltakere=deltakere, totalt_tips=totalt_tips, 
-                          totalt_resultater=totalt_resultater, melding=melding)
+    return render_template('administrer.html', deltakere=deltakere, totalt_tips=totalt_tips,
+                           totalt_resultater=totalt_resultater, melding=melding)
+
 
 @app.route('/resultater', methods=['GET', 'POST'])
 def resultater():
-    if not check_admin():
-        return redirect('/admin-login?next=/resultater')
-    
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
     if request.method == 'POST':
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        
-        # Lagre kampresultater
         for kamp in kamper:
+            if kamp['fase'] != 'Gruppespill':
+                continue
             mål_hjemme = request.form.get(f"res_home_{kamp['id']}")
             mål_borte = request.form.get(f"res_away_{kamp['id']}")
             resultat = request.form.get(f"res_result_{kamp['id']}")
             dato = request.form.get(f"res_date_{kamp['id']}")
             if mål_hjemme and mål_borte and resultat:
-                hjemmelag_navn = kamp['hjemmelag'][0] if isinstance(kamp['hjemmelag'], tuple) else kamp['hjemmelag']
-                bortelag_navn = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
+                hjemmelag = kamp['hjemmelag'][0] if isinstance(kamp['hjemmelag'], tuple) else kamp['hjemmelag']
+                bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
                 c.execute('REPLACE INTO resultater (kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                          (kamp['id'], hjemmelag_navn, bortelag_navn, mål_hjemme, mål_borte, resultat, dato))
-        
-        # Lagre gruppefasit
+                          (kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato))
         for gruppe_navn, lag_liste in grupper.items():
-            for lag_tuple in lag_liste:
-                lag_navn = lag_tuple[0]
-                plassering = request.form.get(f"fasit_{gruppe_navn}_{lag_navn}")
+            for lag in lag_liste:
+                plassering = request.form.get(f"fasit_{gruppe_navn}_{lag}")
                 if plassering:
                     c.execute('REPLACE INTO gruppefasit (gruppe, lag, plassering) VALUES (?, ?, ?)',
-                              (gruppe_navn, lag_navn, int(plassering)))
-        
+                              (gruppe_navn, lag, int(plassering)))
         conn.commit()
         conn.close()
         return redirect('/resultater')
-    
-    # Hent eksisterende resultater fra database
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
     c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat, dato FROM resultater')
     eksisterende_resultater = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3], "dato": row[4]} for row in c.fetchall()}
-    
-    # Hent eksisterende gruppefasit
     c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
     eksisterende_gruppefasit = {}
     for gruppe, lag, plassering in c.fetchall():
         if gruppe not in eksisterende_gruppefasit:
             eksisterende_gruppefasit[gruppe] = {}
         eksisterende_gruppefasit[gruppe][lag] = plassering
-    
     conn.close()
-    
-    return render_template('resultater.html', kamper=kamper, grupper=grupper, 
-                         eksisterende_resultater=eksisterende_resultater,
-                         eksisterende_gruppefasit=eksisterende_gruppefasit)
+    return render_template('resultater.html', kamper=kamper, grupper=grupper_med_flagg,
+                           eksisterende_resultater=eksisterende_resultater,
+                           eksisterende_gruppefasit=eksisterende_gruppefasit)
+
 
 @app.route('/poeng', methods=['GET', 'POST'])
 def poeng():
@@ -644,206 +427,96 @@ def poeng():
     tips_data = c.fetchall()
     c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat FROM resultater')
     resultater_data = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3]} for row in c.fetchall()}
-    
-    # Hent gruppetips og fasit
-    c.execute('SELECT navn, telefon, epost, gruppe, lag, plassering FROM gruppetips')
-    gruppetips_data = c.fetchall()
-    c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
-    gruppefasit_data = c.fetchall()
-    gruppefasit_dict = {(row[0], row[1]): row[2] for row in gruppefasit_data}
-    
-    conn.close()
-
     bruker_poeng = {}
-    
-    # Beregn poeng for kampresultater
     for navn, telefon, epost, kamp_id, mål_hjemme, mål_borte, resultat in tips_data:
         key = (navn, telefon, epost)
-        if key not in bruker_poeng:
-            bruker_poeng[key] = {"kamper": 0, "grupper": 0, "totalt": 0}
+        if key not in bruker_poeng: bruker_poeng[key] = 0
         if kamp_id in resultater_data:
             res = resultater_data[kamp_id]
             poeng = 0
-            if resultat == res['resultat']:
-                poeng += 1
-            if int(mål_hjemme) == res['mål_hjemme'] and int(mål_borte) == res['mål_borte']:
-                poeng += 2
-            elif int(mål_hjemme) == res['mål_hjemme'] or int(mål_borte) == res['mål_borte']:
-                poeng += 1
-            bruker_poeng[key]["kamper"] += poeng
-    
-    # Beregn poeng for gruppetips
-    for navn, telefon, epost, gruppe, lag, plassering in gruppetips_data:
+            if resultat == res['resultat']: poeng += 1
+            if int(mål_hjemme) == res['mål_hjemme'] and int(mål_borte) == res['mål_borte']: poeng += 2
+            elif int(mål_hjemme) == res['mål_hjemme'] or int(mål_borte) == res['mål_borte']: poeng += 1
+            bruker_poeng[key] += poeng
+
+    c.execute('SELECT fase, lag FROM sluttspillfasit')
+    sluttspill_fasit = {}
+    for fase, lag in c.fetchall():
+        if fase not in sluttspill_fasit: sluttspill_fasit[fase] = set()
+        sluttspill_fasit[fase].add(lag)
+
+    c.execute('SELECT navn, telefon, epost, fase, lag FROM sluttspilltips')
+    for navn, telefon, epost, fase, lag in c.fetchall():
         key = (navn, telefon, epost)
-        if key not in bruker_poeng:
-            bruker_poeng[key] = {"kamper": 0, "grupper": 0, "totalt": 0}
-        
-        if (gruppe, lag) in gruppefasit_dict:
-            riktig_plassering = gruppefasit_dict[(gruppe, lag)]
-            if plassering == riktig_plassering:
-                # Riktig plassering gir 3 poeng
-                bruker_poeng[key]["grupper"] += 3
-    
-    # Beregn totalt poeng
-    for key in bruker_poeng:
-        bruker_poeng[key]["totalt"] = bruker_poeng[key]["kamper"] + bruker_poeng[key]["grupper"]
+        if key not in bruker_poeng: bruker_poeng[key] = 0
+        if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
+            fase_poeng = {
+                '8-delsfinale': 2,
+                'Kvartfinale': 5,
+                'Semifinale': 10,
+                'Bronsefinale': 10,
+                'Finale': 20
+            }
+            bruker_poeng[key] += fase_poeng.get(fase, 2)
 
-    rangering = sorted(bruker_poeng.items(), key=lambda x: x[1]["totalt"], reverse=True)
-
+    conn.close()
+    rangering = sorted(bruker_poeng.items(), key=lambda x: x[1], reverse=True)
     melding = None
     if request.method == 'POST':
         action = request.form.get('action', 'email')
-        
         if action == 'export':
-            # Eksporter til HTML fil
             try:
                 filename = 'poengoversikt.html'
                 html_content = generate_email_html(rangering)
                 with open(filename, 'w', encoding='utf-8') as f:
                     f.write(html_content)
-                melding = f"✅ Poengoversikt eksportert til {filename}! Du kan åpne filen og kopiere innholdet."
+                melding = f"✅ Poengoversikt eksportert til {filename}!"
             except Exception as e:
                 melding = f"❌ Feil ved eksportering: {str(e)}"
         else:
-            # Prøv å sende e-post
-            print("📧 Forsøker å sende e-post...")
-            print(f"📊 Antall deltakere: {len(rangering)}")
             status = send_email(rangering)
-            if status:
-                melding = "✅ E-post er sendt til alle deltakere!"
-            else:
-                melding = "❌ Kunne ikke sende e-post. Prøv å eksportere i stedet."
+            melding = "✅ E-post er sendt!" if status else "❌ Kunne ikke sende e-post."
     return render_template('poeng.html', rangering=rangering, melding=melding)
-
-@app.route('/gruppetips', methods=['GET', 'POST'])
-def gruppetips():
-    if request.method == 'POST':
-        navn = request.form['navn']
-        telefon = request.form['telefon']
-        epost = request.form['epost']
-        
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        
-        # Slett eksisterende gruppetips for denne brukeren
-        c.execute('DELETE FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', 
-                  (navn, telefon, epost))
-        
-        # Lagre nye gruppetips
-        for gruppe_navn, lag_liste in grupper.items():
-            for lag in lag_liste:
-                plassering = request.form.get(f"gruppe_{gruppe_navn}_{lag}")
-                if plassering:
-                    c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
-                              (navn, telefon, epost, gruppe_navn, lag, int(plassering)))
-        
-        conn.commit()
-        conn.close()
-        return redirect('/gruppetips')
-    
-    return render_template('gruppetips.html', grupper=grupper)
-
 
 
 def generate_email_html(rangering):
-    """Genererer HTML for e-post"""
-    html = '''<!DOCTYPE html>
-<html lang="no">
-<head>
-    <meta charset="UTF-8">
-    <title>Poengoversikt - VM Tipping</title>
-    <style>
-        body { font-family: Arial, sans-serif; padding: 20px; }
-        table { border-collapse: collapse; width: 100%; max-width: 600px; margin: 20px 0; }
-        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
-        th { background-color: #4CAF50; color: white; }
-        tr:nth-child(even) { background-color: #f2f2f2; }
-        h2 { color: #333; }
-    </style>
-</head>
-<body>
-    <h2>Poengoversikt - VM Tipping 2026</h2>
-    <table>
-        <tr>
-            <th>Plass</th>
-            <th>Navn</th>
-            <th>Kamper</th>
-            <th>Grupper</th>
-            <th>Totalt</th>
-        </tr>
-'''
-    plass = 1
-    for (navn, telefon, epost), poeng_dict in rangering:
-        kamper = poeng_dict.get("kamper", 0)
-        grupper_poeng = poeng_dict.get("grupper", 0)
-        totalt = poeng_dict.get("totalt", 0)
-        html += f'        <tr><td>{plass}</td><td>{navn}</td><td>{kamper}</td><td>{grupper_poeng}</td><td>{totalt}</td></tr>\n'
-        plass += 1
-    
-    html += '''    </table>
-    <p><em>Kamper: Poeng fra kampresultater | Grupper: Poeng fra gruppeplasseringer</em></p>
-</body>
-</html>'''
+    html = '<html><body><h2>Poengoversikt - VM Tipping 2026</h2><table border="1"><tr><th>Plass</th><th>Navn</th><th>Poeng</th></tr>'
+    for plass, ((navn, telefon, epost), poeng) in enumerate(rangering, 1):
+        html += f'<tr><td>{plass}</td><td>{navn}</td><td>{poeng}</td></tr>'
+    html += '</table></body></html>'
     return html
+
 
 def send_email(rangering):
     sender = 'magne.kofoed@gmail.com'
-    password = 'gpnb xbbf jhuk trzl'  # fra Google App-passord
+    password = 'gpnb xbbf jhuk trzl'
     subject = 'Oppdatert poengoversikt - VM Tipping'
-
-    body = '<h2>Poengoversikt</h2><table border="1"><tr><th>Plass</th><th>Navn</th><th>Kamper</th><th>Grupper</th><th>Totalt</th></tr>'
-    plass = 1
-    for (navn, telefon, epost), poeng_dict in rangering:
-        kamper = poeng_dict.get("kamper", 0)
-        grupper_poeng = poeng_dict.get("grupper", 0)
-        totalt = poeng_dict.get("totalt", 0)
-        body += f'<tr><td>{plass}</td><td>{navn}</td><td>{kamper}</td><td>{grupper_poeng}</td><td>{totalt}</td></tr>'
-        plass += 1
-    body += '</table><p><em>Kamper: Poeng fra kampresultater | Grupper: Poeng fra gruppeplasseringer</em></p>'
-
+    body = '<h2>Poengoversikt</h2><table border="1"><tr><th>Plass</th><th>Navn</th><th>Poeng</th></tr>'
+    for plass, ((navn, telefon, epost), poeng) in enumerate(rangering, 1):
+        body += f'<tr><td>{plass}</td><td>{navn}</td><td>{poeng}</td></tr>'
+    body += '</table>'
     msg = MIMEMultipart()
     msg['From'] = sender
     msg['Subject'] = subject
     msg.attach(MIMEText(body, 'html'))
-
     recipients = [epost for ((_, _, epost), _) in rangering if epost]
-    print(f"📧 Mottakere: {recipients}")
-    
-    if not recipients:
-        print("⚠️ Ingen mottakere funnet!")
-        return False
-    
+    if not recipients: return False
     msg['To'] = ', '.join(recipients)
-
-    # Prøv først port 465 (SSL)
     try:
-        print("🔌 Prøver port 465 (SSL)...")
         with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=10) as server:
-            print("🔐 Logger inn...")
             server.login(sender, password)
-            print("📤 Sender e-post...")
             server.sendmail(sender, recipients, msg.as_string())
-        print("✅ E-post sendt til:", recipients)
         return True
-    except Exception as e1:
-        print(f"❌ Port 465 feilet: {str(e1)}")
-        
-        # Prøv deretter port 587 (TLS)
+    except:
         try:
-            print("🔌 Prøver port 587 (TLS)...")
             with smtplib.SMTP('smtp.gmail.com', 587, timeout=10) as server:
-                print("🔒 Starter TLS...")
                 server.starttls()
-                print("🔐 Logger inn...")
                 server.login(sender, password)
-                print("📤 Sender e-post...")
                 server.sendmail(sender, recipients, msg.as_string())
-            print("✅ E-post sendt til:", recipients)
             return True
-        except Exception as e2:
-            print(f"❌ Port 587 feilet: {str(e2)}")
-            print("❌ Begge porter feilet. Bruk eksporter-funksjonen i stedet.")
+        except:
             return False
+
 
 if __name__ == '__main__':
     import os

@@ -45,9 +45,7 @@
                     <tr>
                         <th>Plass</th>
                         <th>Navn</th>
-                        <th>Kamper</th>
-                        <th>Grupper</th>
-                        <th>Totalt</th>
+                        <th>Poeng</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -55,9 +53,7 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ item[0][0] }}</td>
-                        <td>{{ item[1].kamper }}</td>
-                        <td>{{ item[1].grupper }}</td>
-                        <td><strong>{{ item[1].totalt }}</strong></td>
+                        <td>{{ item[1] }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

@@ -135,6 +135,7 @@
                         </thead>
                         <tbody>
                             {% for kamp in kamper %}
+                            {% if kamp.fase == 'Gruppespill' %}
                             <tr data-kamp-id="{{ kamp.id }}" data-gruppe="{{ kamp.gruppe }}" data-fase="{{ kamp.fase }}">
                                 <td>{{ kamp.id }}</td>
                                 <td>
@@ -143,16 +144,12 @@
                                     {% endif %}
                                 </td>
                                 <td>
-                                    <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
-                                        {% if kamp.gruppe %}Gr. {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
+                                    <span class="badge bg-primary">
+                                        Gr. {{ kamp.gruppe }}
                                     </span>
                                 </td>
-                                <td>
-                                    {% if kamp.hjemmelag[1] %}<span class="fi fi-{{ kamp.hjemmelag[1] }}"></span> {% endif %}{{ kamp.hjemmelag[0] }}
-                                </td>
-                                <td>
-                                    {% if kamp.bortelag[1] %}<span class="fi fi-{{ kamp.bortelag[1] }}"></span> {% endif %}{{ kamp.bortelag[0] }}
-                                </td>
+                                <td>{{ kamp.hjemmelag if kamp.hjemmelag is string else kamp.hjemmelag[0] }}</td>
+                                <td>{{ kamp.bortelag if kamp.bortelag is string else kamp.bortelag[0] }}</td>
                                 <td style="width: 60px;"><input type="number" name="home_{{ kamp.id }}" id="home_{{ kamp.id }}" class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
                                 <td style="width: 60px;"><input type="number" name="away_{{ kamp.id }}" id="away_{{ kamp.id }}" class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
                                 <td style="width: 100px;">
@@ -164,6 +161,7 @@
                                     </select>
                                 </td>
                             </tr>
+                            {% endif %}
                             {% endfor %}
                         </tbody>
                     </table>
@@ -177,9 +175,11 @@
                     <small><strong>Info:</strong> Plasseringene beregnes automatisk fra kamptips, men du kan justere manuelt. <strong>Bonus:</strong> Riktig plassering = 3 poeng per lag!</small>
                 </div>
                 
-                <div style="max-height: 1200px; overflow-y: auto;">
+                <div style="max-height: none; overflow-y: visible;">
+                    <div class="row">
                     {% for gruppe_navn, lag_liste in grupper.items() %}
-                    <div class="card gruppe-card mb-3">
+                    <div class="col-6 mb-2">
+                    <div class="card gruppe-card mb-0">
                         <div class="gruppe-header d-flex justify-content-between align-items-center">
                             <span>Gruppe {{ gruppe_navn }}</span>
                             <button type="button" class="btn btn-sm btn-light" onclick="calculateGroupStandings('{{ gruppe_navn }}')" style="font-size: 0.75em; padding: 2px 8px;">
@@ -190,15 +190,10 @@
                             {% for lag in lag_liste %}
                             <div class="lag-row d-flex justify-content-between align-items-center" style="padding: 8px;">
                                 <div style="flex: 1;">
-                                    <span style="font-size: 0.95em;">
-                                        {% if lag[1] %}
-                                        <span class="fi fi-{{ lag[1] }}"></span>
-                                        {% endif %}
-                                        {{ lag[0] }}
-                                    </span>
-                                    <small class="text-muted ms-2" id="stats_{{ gruppe_navn }}_{{ lag[0] }}"></small>
+                                    <span style="font-size: 0.95em;">{{ lag }}</span>
+                                    <small class="text-muted ms-2" id="stats_{{ gruppe_navn }}_{{ lag }}"></small>
                                 </div>
-                                <select name="gruppe_{{ gruppe_navn }}_{{ lag[0] }}" 
+                                <select name="gruppe_{{ gruppe_navn }}_{{ lag }}" 
                                         class="form-select form-select-sm gruppe-select" 
                                         data-gruppe="{{ gruppe_navn }}"
                                         onchange="validateGroupPositions('{{ gruppe_navn }}')"
@@ -214,7 +209,9 @@
                             {% endfor %}
                         </div>
                     </div>
+                    </div>
                     {% endfor %}
+                    </div>
                 </div>
                 
                 <div class="text-center mt-3">
@@ -224,7 +221,50 @@
                 </div>
             </div>
         </div>
-        
+
+        <!-- Sluttspilltips - egen seksjon -->
+        <div class="mt-5">
+            <h3>🏆 Sluttspilltips <small class="text-muted fs-6">(2 poeng per riktig lag)</small></h3>
+            <div class="alert alert-warning py-2">
+                <small>Tipp hvilke lag som er med i hver runde. Poeng per riktig lag:
+                <strong>8-delsfinale: 2p</strong> |
+                <strong>Kvartfinale: 5p</strong> |
+                <strong>Semifinale/Bronsefinale: 10p</strong> |
+                <strong>Finale: 20p</strong></small>
+            </div>
+
+            {% set fase_info = [
+                ('8-delsfinale', 16, '2026-06-28', '2p/lag'),
+                ('Kvartfinale', 8, '2026-07-09', '5p/lag'),
+                ('Semifinale', 4, '2026-07-14', '10p/lag'),
+                ('Bronsefinale', 2, '2026-07-18', '10p/lag'),
+                ('Finale', 2, '2026-07-19', '20p/lag')
+            ] %}
+
+            {% for fase, antall_lag, dato, poeng_tekst in fase_info %}
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white d-flex justify-content-between">
+                    <strong>{{ fase }}</strong>
+                    <small>{{ dato[8:10] }}/{{ dato[5:7] }}/{{ dato[0:4] }} – {{ antall_lag }} lag – <strong>{{ poeng_tekst }}</strong></small>
+                </div>
+                <div class="card-body p-3">
+                    <div class="row">
+                    {% for i in range(antall_lag) %}
+                    <div class="col-md-3 col-sm-4 col-6 mb-2">
+                        <select name="sluttspill_{{ fase }}_{{ i }}" class="form-select form-select-sm">
+                            <option value="">Lag {{ i+1 }}</option>
+                            {% for alt in sluttspill_alternativer %}
+                            <option value="{{ alt }}">{{ alt }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
         <div class="text-center mt-4">
             <button type="submit" class="btn btn-primary btn-lg">Send inn alle tips</button>
         </div>
@@ -238,7 +278,7 @@ console.log('✅ JavaScript loaded - version 3.1 - DROPDOWN FIXED - Button oncli
 const gruppeData = {
     {% for gruppe_navn, lag_liste in grupper.items() %}
     "{{ gruppe_navn }}": [
-        {% for lag in lag_liste %}"{{ lag[0] }}"{% if not loop.last %}, {% endif %}{% endfor %}
+        {% for lag in lag_liste %}"{{ lag }}"{% if not loop.last %}, {% endif %}{% endfor %}
     ]{% if not loop.last %},{% endif %}
     {% endfor %}
 };
