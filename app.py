@@ -262,7 +262,21 @@ def index():
         conn.commit()
         conn.close()
         return redirect('/')
-    return render_template('index.html', kamper=kamper, grupper=grupper, sluttspill_alternativer=sluttspill_alternativer)
+    # Beregn foreslåtte 8-delsfinale-kandidater basert på gruppetips
+    # VM 2026: De to beste fra hver gruppe (24 lag) + 8 beste tredjeplasser = 32 lag
+    forslag_8del = []
+    # Hent vinnere og toere fra alle grupper (fra grupper-dict, ingen fasit ennå)
+    for g in sorted(grupper.keys()):
+        lag = grupper[g]
+        if len(lag) >= 2:
+            forslag_8del.append(f"Vinner gr. {g} ({lag[0]}?)")
+            forslag_8del.append(f"Toer gr. {g} ({lag[1]}?)")
+    # Legg til 8 plasser for beste tredjeplasser
+    for i in range(1, 9):
+        forslag_8del.append(f"Beste 3.plass {i}")
+    return render_template('index.html', kamper=kamper, grupper=grupper,
+                           sluttspill_alternativer=sluttspill_alternativer,
+                           forslag_8del=forslag_8del)
 
 
 @app.route('/regler')
@@ -283,7 +297,17 @@ def deltakere():
         tips = c.fetchall()
         tips_formatert = [{'kamp_id': t[0], 'hjemmelag': t[1], 'bortelag': t[2],
                            'mål_hjemme': t[3], 'mål_borte': t[4], 'resultat': t[5]} for t in tips]
-        deltaker_liste.append({'navn': navn, 'telefon': telefon, 'epost': epost, 'tips': tips_formatert})
+
+        c.execute('SELECT fase, lag FROM sluttspilltips WHERE navn=? AND telefon=? AND epost=? ORDER BY fase',
+                  (navn, telefon, epost))
+        sluttspill = {}
+        for fase, lag in c.fetchall():
+            if fase not in sluttspill:
+                sluttspill[fase] = []
+            sluttspill[fase].append(lag)
+
+        deltaker_liste.append({'navn': navn, 'telefon': telefon, 'epost': epost,
+                               'tips': tips_formatert, 'sluttspilltips': sluttspill})
     conn.close()
     return render_template('deltakere.html', deltakere=deltaker_liste)
 
@@ -385,8 +409,6 @@ def resultater():
     c = conn.cursor()
     if request.method == 'POST':
         for kamp in kamper:
-            if kamp['fase'] != 'Gruppespill':
-                continue
             mål_hjemme = request.form.get(f"res_home_{kamp['id']}")
             mål_borte = request.form.get(f"res_away_{kamp['id']}")
             resultat = request.form.get(f"res_result_{kamp['id']}")
@@ -396,6 +418,15 @@ def resultater():
                 bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
                 c.execute('REPLACE INTO resultater (kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato) VALUES (?, ?, ?, ?, ?, ?, ?)',
                           (kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato))
+
+        # Sluttspillfasit
+        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2}
+        for fase, antall in fase_antall.items():
+            for i in range(antall):
+                lag = request.form.get(f"sluttspill_fasit_{fase}_{i}")
+                if lag:
+                    c.execute('INSERT OR IGNORE INTO sluttspillfasit (fase, lag) VALUES (?, ?)', (fase, lag))
+
         for gruppe_navn, lag_liste in grupper.items():
             for lag in lag_liste:
                 plassering = request.form.get(f"fasit_{gruppe_navn}_{lag}")
@@ -405,6 +436,7 @@ def resultater():
         conn.commit()
         conn.close()
         return redirect('/resultater')
+
     c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat, dato FROM resultater')
     eksisterende_resultater = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3], "dato": row[4]} for row in c.fetchall()}
     c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
@@ -413,10 +445,18 @@ def resultater():
         if gruppe not in eksisterende_gruppefasit:
             eksisterende_gruppefasit[gruppe] = {}
         eksisterende_gruppefasit[gruppe][lag] = plassering
+    c.execute('SELECT fase, lag FROM sluttspillfasit')
+    eksisterende_sluttspillfasit = {}
+    for fase, lag in c.fetchall():
+        if fase not in eksisterende_sluttspillfasit:
+            eksisterende_sluttspillfasit[fase] = []
+        eksisterende_sluttspillfasit[fase].append(lag)
     conn.close()
     return render_template('resultater.html', kamper=kamper, grupper=grupper_med_flagg,
                            eksisterende_resultater=eksisterende_resultater,
-                           eksisterende_gruppefasit=eksisterende_gruppefasit)
+                           eksisterende_gruppefasit=eksisterende_gruppefasit,
+                           eksisterende_sluttspillfasit=eksisterende_sluttspillfasit,
+                           sluttspill_alternativer=sluttspill_alternativer)
 
 
 @app.route('/poeng', methods=['GET', 'POST'])

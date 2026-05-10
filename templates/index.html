@@ -246,6 +246,18 @@
                 <div class="card-header bg-secondary text-white d-flex justify-content-between">
                     <strong>{{ fase }}</strong>
                     <small>{{ dato[8:10] }}/{{ dato[5:7] }}/{{ dato[0:4] }} – {{ antall_lag }} lag – <strong>{{ poeng_tekst }}</strong></small>
+                    {% if fase == '8-delsfinale' %}
+                    <button type="button" class="btn btn-sm btn-warning" onclick="foresla8delsfinale()">💡 Foreslå fra gruppetips</button>
+                    {% endif %}
+                    {% if fase == 'Kvartfinale' %}
+                    <button type="button" class="btn btn-sm btn-warning" onclick="foreslaKvartfinale()">💡 Foreslå fra 8-delsfinale</button>
+                    {% endif %}
+                    {% if fase == 'Semifinale' %}
+                    <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('Semifinale', 'Kvartfinale', 4)">💡 Foreslå fra kvartfinale</button>
+                    {% endif %}
+                    {% if fase == 'Finale' or fase == 'Bronsefinale' %}
+                    <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('{{ fase }}', 'Semifinale', 2)">💡 Foreslå fra semifinale</button>
+                    {% endif %}
                 </div>
                 <div class="card-body p-3">
                     <div class="row">
@@ -272,9 +284,8 @@
 </div>
 
 <script>
-console.log('✅ JavaScript loaded - version 3.1 - DROPDOWN FIXED - Button onclick handlers');
+console.log('✅ JavaScript loaded - version 3.2');
 
-// Gruppe data - mapping av gruppe til lag
 const gruppeData = {
     {% for gruppe_navn, lag_liste in grupper.items() %}
     "{{ gruppe_navn }}": [
@@ -283,462 +294,220 @@ const gruppeData = {
     {% endfor %}
 };
 
-// Beregn gruppetabell basert på tippede kamper
 function calculateGroupStandings(gruppeNavn) {
     const teams = gruppeData[gruppeNavn];
     const standings = {};
-    
-    console.log(`=== Beregner gruppe ${gruppeNavn} ===`);
-    console.log('Lag i gruppen:', teams);
-    
-    // Initialiser statistikk for hvert lag
-    teams.forEach(team => {
-        standings[team] = {
-            points: 0,
-            goalsFor: 0,
-            goalsAgainst: 0,
-            goalDifference: 0,
-            played: 0
-        };
-    });
-    
-    // Gå gjennom alle kamper og finn gruppekamper for denne gruppen
+    teams.forEach(team => { standings[team] = { points: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, played: 0 }; });
     const rows = document.querySelectorAll(`tbody tr[data-gruppe="${gruppeNavn}"]`);
-    console.log(`Fant ${rows.length} kamper for gruppe ${gruppeNavn}`);
     rows.forEach((row) => {
         const kampId = row.getAttribute('data-kamp-id');
-        console.log(`Prosesserer kamp ${kampId}`);
         const cells = row.querySelectorAll('td');
-        
-        // Hent lagnavn direkte fra HTML-strukturen
-        const homeCell = cells[3];  // Kolonne 4: Hjemmelag (0-indeksert)
-        const awayCell = cells[4];  // Kolonne 5: Bortelag (0-indeksert)
-        
-        // Få rå tekst og normaliser
-        let homeTeamRaw = homeCell.textContent.replace(/\s+/g, ' ').trim();
-        let awayTeamRaw = awayCell.textContent.replace(/\s+/g, ' ').trim();
-        
-        // Finn matchende lagnavn - bruk strengere matching
-        let homeTeam = null;
-        let awayTeam = null;
-        
-        // Prøv å finne eksakt match først
-        for (const team of teams) {
-            if (homeTeamRaw === team) homeTeam = team;
-            if (awayTeamRaw === team) awayTeam = team;
-        }
-        
-        // Hvis ikke eksakt match, prøv substring matching
-        if (!homeTeam) {
-            for (const team of teams) {
-                if (homeTeamRaw.includes(team) || team.includes(homeTeamRaw)) {
-                    homeTeam = team;
-                    break;
-                }
-            }
-        }
-        
-        if (!awayTeam) {
-            for (const team of teams) {
-                if (awayTeamRaw.includes(team) || team.includes(awayTeamRaw)) {
-                    awayTeam = team;
-                    break;
-                }
-            }
-        }
-        
-        if (!homeTeam || !awayTeam) {
-            console.error(`Kamp ${kampId}: Kunne ikke matche lag i gruppe ${gruppeNavn}`);
-            console.error('  Raw hjemme:', homeTeamRaw);
-            console.error('  Raw borte:', awayTeamRaw);
-            console.error('  Tilgjengelige lag:', teams);
-            return;
-        }
-        
-        // Hent tippede mål fra input-feltene
-        const homeGoalsInput = document.getElementById('home_' + kampId);
-        const awayGoalsInput = document.getElementById('away_' + kampId);
-        const homeGoals = parseInt(homeGoalsInput?.value);
-        const awayGoals = parseInt(awayGoalsInput?.value);
-        
-        // Kun beregn hvis begge mål er fylt inn
+        let homeTeamRaw = cells[3].textContent.replace(/\s+/g, ' ').trim();
+        let awayTeamRaw = cells[4].textContent.replace(/\s+/g, ' ').trim();
+        let homeTeam = teams.find(t => t === homeTeamRaw) || teams.find(t => homeTeamRaw.includes(t) || t.includes(homeTeamRaw));
+        let awayTeam = teams.find(t => t === awayTeamRaw) || teams.find(t => awayTeamRaw.includes(t) || t.includes(awayTeamRaw));
+        if (!homeTeam || !awayTeam) return;
+        const homeGoals = parseInt(document.getElementById('home_' + kampId)?.value);
+        const awayGoals = parseInt(document.getElementById('away_' + kampId)?.value);
         if (!isNaN(homeGoals) && !isNaN(awayGoals)) {
-            console.log(`Kamp ${kampId}: ${homeTeam} ${homeGoals}-${awayGoals} ${awayTeam}`);
-            // Oppdater statistikk
-            standings[homeTeam].played++;
-            standings[awayTeam].played++;
-            standings[homeTeam].goalsFor += homeGoals;
-            standings[homeTeam].goalsAgainst += awayGoals;
-            standings[awayTeam].goalsFor += awayGoals;
-            standings[awayTeam].goalsAgainst += homeGoals;
-            
-            // Tildel poeng basert på tippet resultat
-            if (homeGoals > awayGoals) {
-                standings[homeTeam].points += 3; // Hjemmeseier
-            } else if (awayGoals > homeGoals) {
-                standings[awayTeam].points += 3; // Borteseier
-            } else {
-                standings[homeTeam].points += 1; // Uavgjort
-                standings[awayTeam].points += 1;
-            }
-            
-            // Beregn målforskjell
+            standings[homeTeam].played++; standings[awayTeam].played++;
+            standings[homeTeam].goalsFor += homeGoals; standings[homeTeam].goalsAgainst += awayGoals;
+            standings[awayTeam].goalsFor += awayGoals; standings[awayTeam].goalsAgainst += homeGoals;
+            if (homeGoals > awayGoals) { standings[homeTeam].points += 3; }
+            else if (awayGoals > homeGoals) { standings[awayTeam].points += 3; }
+            else { standings[homeTeam].points += 1; standings[awayTeam].points += 1; }
             standings[homeTeam].goalDifference = standings[homeTeam].goalsFor - standings[homeTeam].goalsAgainst;
             standings[awayTeam].goalDifference = standings[awayTeam].goalsFor - standings[awayTeam].goalsAgainst;
         }
     });
-    
-    // Sorter lagene etter FIFA-regler: 1) Poeng, 2) Målforskjell, 3) Scorede mål
     const sortedTeams = teams.slice().sort((a, b) => {
-        const statsA = standings[a];
-        const statsB = standings[b];
-        
-        if (statsB.points !== statsA.points) return statsB.points - statsA.points;
-        if (statsB.goalDifference !== statsA.goalDifference) return statsB.goalDifference - statsA.goalDifference;
-        return statsB.goalsFor - statsA.goalsFor;
+        if (standings[b].points !== standings[a].points) return standings[b].points - standings[a].points;
+        if (standings[b].goalDifference !== standings[a].goalDifference) return standings[b].goalDifference - standings[a].goalDifference;
+        return standings[b].goalsFor - standings[a].goalsFor;
     });
-    
-    // Oppdater select-feltene og vis statistikk
     sortedTeams.forEach((team, index) => {
-        const position = index + 1;
-        const stats = standings[team];
-        
-        // Finn select-elementet for dette laget
-        const selectElement = document.querySelector(`select[name="gruppe_${gruppeNavn}_${team}"]`);
-        if (selectElement) {
-            selectElement.value = position;
-        }
-        
-        // Vis statistikk ved siden av lagnavn
-        const statsElement = document.getElementById(`stats_${gruppeNavn}_${team}`);
-        if (statsElement) {
-            statsElement.textContent = `(${stats.points}p, ${stats.goalDifference > 0 ? '+' : ''}${stats.goalDifference})`;
-        }
+        const sel = document.querySelector(`select[name="gruppe_${gruppeNavn}_${team}"]`);
+        if (sel) sel.value = index + 1;
+        const statsEl = document.getElementById(`stats_${gruppeNavn}_${team}`);
+        if (statsEl) statsEl.textContent = `(${standings[team].points}p, ${standings[team].goalDifference > 0 ? '+' : ''}${standings[team].goalDifference})`;
     });
-    
-    // Valider at ingen duplikater oppstår
     validateGroupPositions(gruppeNavn);
 }
 
-// Beregn alle grupper
 function calculateAllGroups() {
-    const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-    grupper.forEach(gruppe => calculateGroupStandings(gruppe));
-    
+    ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => calculateGroupStandings(g));
     showToast('✅ Alle gruppetabeller er beregnet!');
 }
 
-// FIFA Rankings (approximert basert på FIFA ranking og siste resultater)
-// Kvalifiseringslag (UEFA PO A-D og FIFA PO 1-2) har lavere rating siden de ikke er direkte kvalifisert
 const teamRankings = {
-    "Mexico": 15, "Sør-Afrika": 60, "Sør-Korea": 25, "UEFA PO D": 70,
-    "Canada": 45, "UEFA PO A": 68, "Qatar": 55, "Sveits": 18,
+    "Mexico": 15, "Sør-Afrika": 60, "Sør-Korea": 25, "Tsjekkia": 45,
+    "Canada": 45, "Bosnia-Hercegovina": 55, "Qatar": 55, "Sveits": 18,
     "Brasil": 5, "Marokko": 13, "Haiti": 85, "Skottland": 40,
-    "USA": 16, "Paraguay": 50, "Australia": 28, "UEFA PO C": 72,
+    "USA": 16, "Paraguay": 50, "Australia": 28, "Tyrkia": 38,
     "Tyskland": 12, "Curaçao": 80, "Elfenbenskysten": 35, "Ecuador": 38,
-    "Nederland": 8, "Japan": 20, "UEFA PO B": 75, "Tunisia": 32,
+    "Nederland": 8, "Japan": 20, "Sverige": 28, "Tunisia": 32,
     "Belgia": 6, "Egypt": 36, "Iran": 22, "New Zealand": 95,
     "Spania": 10, "Kapp Verde": 70, "Saudi-Arabia": 54, "Uruguay": 14,
-    "Frankrike": 2, "Senegal": 19, "FIFA PO 2": 78, "Norge": 48,
+    "Frankrike": 2, "Senegal": 19, "Irak": 65, "Norge": 48,
     "Argentina": 1, "Algerie": 42, "Østerrike": 26, "Jordan": 87,
-    "Portugal": 7, "FIFA PO 1": 76, "Usbekistan": 65, "Colombia": 17,
+    "Portugal": 7, "DR Kongo": 60, "Usbekistan": 65, "Colombia": 17,
     "England": 4, "Kroatia": 9, "Ghana": 58, "Panama": 52
 };
 
 function randomTips(mode = 'fifa') {
-    console.log(`=== Starter tilfeldig tipping - Modus: ${mode} ===`);
-    const rows = document.querySelectorAll('tbody tr');
-    
-    rows.forEach((row, index) => {
+    document.querySelectorAll('tbody tr').forEach((row) => {
         const homeInput = row.querySelector('input[name^="home_"]');
         const awayInput = row.querySelector('input[name^="away_"]');
-        
-        if (!homeInput || !awayInput) {
-            console.error(`Rad ${index}: Kunne ikke finne input-felt`);
-            return;
-        }
-        
+        if (!homeInput || !awayInput) return;
         const kampId = homeInput.name.replace('home_', '');
         const cells = row.querySelectorAll('td');
         const homeTeam = cells[3].textContent.replace(/\s+/g, ' ').trim();
         const awayTeam = cells[4].textContent.replace(/\s+/g, ' ').trim();
-        
         const homeRanking = teamRankings[homeTeam] || 50;
         const awayRanking = teamRankings[awayTeam] || 50;
-        
         let homeGoals, awayGoals;
-        
         if (mode === 'random') {
-            // Helt tilfeldig - alle lag like gode
-            homeGoals = Math.floor(Math.random() * 4); // 0-3
-            awayGoals = Math.floor(Math.random() * 4); // 0-3
-            
+            homeGoals = Math.floor(Math.random() * 4); awayGoals = Math.floor(Math.random() * 4);
         } else if (mode === 'home') {
-            // Hjemmebanefordel - hjemmelaget får boost
-            const homeBoost = 15; // Ekstra fordel
-            const adjustedDiff = awayRanking - homeRanking + homeBoost;
-            
-            if (adjustedDiff > 15) {
-                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-                awayGoals = Math.floor(Math.random() * 2); // 0-1
-            } else if (adjustedDiff > 0) {
-                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-                awayGoals = Math.floor(Math.random() * 3); // 0-2
-            } else {
-                homeGoals = Math.floor(Math.random() * 3); // 0-2
-                awayGoals = Math.floor(Math.random() * 3); // 0-2
-            }
-            
+            const adj = awayRanking - homeRanking + 15;
+            homeGoals = adj > 0 ? Math.floor(Math.random() * 3) + 1 : Math.floor(Math.random() * 3);
+            awayGoals = adj > 15 ? Math.floor(Math.random() * 2) : Math.floor(Math.random() * 3);
         } else if (mode === 'shock') {
-            // Favoritt-sjokkresultat - enten stor seier eller overraskende tap
-            const rankingDiff = awayRanking - homeRanking;
-            const shock = Math.random() < 0.3; // 30% sjanse for sjokk
-            
-            if (Math.abs(rankingDiff) > 20) {
-                // Klar favoritt
-                if (rankingDiff > 0) {
-                    // Hjemmelaget favoritt
-                    if (shock) {
-                        homeGoals = 0; awayGoals = Math.floor(Math.random() * 2) + 2; // Borte vinner 2-3
-                    } else {
-                        homeGoals = Math.floor(Math.random() * 2) + 2; awayGoals = 0; // Hjemme vinner stort
-                    }
-                } else {
-                    // Bortelaget favoritt
-                    if (shock) {
-                        homeGoals = Math.floor(Math.random() * 2) + 2; awayGoals = 0; // Hjemme vinner overraskende
-                    } else {
-                        homeGoals = 0; awayGoals = Math.floor(Math.random() * 2) + 2; // Borte vinner stort
-                    }
-                }
-            } else {
-                homeGoals = Math.floor(Math.random() * 3); // 0-2
-                awayGoals = Math.floor(Math.random() * 3); // 0-2
-            }
-            
+            const diff = awayRanking - homeRanking;
+            const shock = Math.random() < 0.3;
+            if (Math.abs(diff) > 20) {
+                if ((diff > 0 && !shock) || (diff < 0 && shock)) { homeGoals = Math.floor(Math.random() * 2) + 2; awayGoals = 0; }
+                else { homeGoals = 0; awayGoals = Math.floor(Math.random() * 2) + 2; }
+            } else { homeGoals = Math.floor(Math.random() * 3); awayGoals = Math.floor(Math.random() * 3); }
         } else if (mode === 'draw') {
-            // Jevne kamper - mange uavgjort og små marginer
-            const drawChance = Math.random();
-            
-            if (drawChance < 0.5) {
-                // 50% sjanse for uavgjort
-                const score = Math.floor(Math.random() * 3); // 0-2
-                homeGoals = score;
-                awayGoals = score;
-            } else {
-                // Ellers 1-måls margin
-                const base = Math.floor(Math.random() * 3); // 0-2
-                if (Math.random() < 0.5) {
-                    homeGoals = base + 1;
-                    awayGoals = base;
-                } else {
-                    homeGoals = base;
-                    awayGoals = base + 1;
-                }
-            }
-            
+            if (Math.random() < 0.5) { const s = Math.floor(Math.random() * 3); homeGoals = s; awayGoals = s; }
+            else { const b = Math.floor(Math.random() * 3); if (Math.random() < 0.5) { homeGoals = b+1; awayGoals = b; } else { homeGoals = b; awayGoals = b+1; } }
         } else {
-            // FIFA ranking (standard)
-            const rankingDiff = awayRanking - homeRanking;
-            
-            if (rankingDiff > 20) {
-                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-                awayGoals = Math.floor(Math.random() * 2); // 0-1
-            } else if (rankingDiff < -20) {
-                homeGoals = Math.floor(Math.random() * 2); // 0-1
-                awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-            } else if (rankingDiff > 5) {
-                homeGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-                awayGoals = Math.floor(Math.random() * 3); // 0-2
-            } else if (rankingDiff < -5) {
-                homeGoals = Math.floor(Math.random() * 3); // 0-2
-                awayGoals = Math.floor(Math.random() * 3) + 1; // 1-3
-            } else {
-                homeGoals = Math.floor(Math.random() * 3); // 0-2
-                awayGoals = Math.floor(Math.random() * 3); // 0-2
-            }
+            const diff = awayRanking - homeRanking;
+            if (diff > 20) { homeGoals = Math.floor(Math.random() * 3) + 1; awayGoals = Math.floor(Math.random() * 2); }
+            else if (diff < -20) { homeGoals = Math.floor(Math.random() * 2); awayGoals = Math.floor(Math.random() * 3) + 1; }
+            else if (diff > 5) { homeGoals = Math.floor(Math.random() * 3) + 1; awayGoals = Math.floor(Math.random() * 3); }
+            else if (diff < -5) { homeGoals = Math.floor(Math.random() * 3); awayGoals = Math.floor(Math.random() * 3) + 1; }
+            else { homeGoals = Math.floor(Math.random() * 3); awayGoals = Math.floor(Math.random() * 3); }
         }
-        
-        homeInput.value = homeGoals;
-        awayInput.value = awayGoals;
+        homeInput.value = homeGoals; awayInput.value = awayGoals;
         updateResult(parseInt(kampId));
     });
-    
     calculateAllGroups();
-    
-    const messages = {
-        'fifa': '⭐ Tips generert basert på FIFA-ranking',
-        'random': '🎯 Helt tilfeldige tips generert',
-        'home': '🏠 Tips med hjemmebanefordel generert',
-        'shock': '💥 Tips med sjokkresultater generert',
-        'draw': '🤝 Jevne kamper med mange uavgjort generert'
-    };
-    
-    showToast(messages[mode] || '🎲 Tilfeldige tips generert');
+    const messages = { 'fifa': '⭐ FIFA-ranking tips', 'random': '🎯 Tilfeldige tips', 'home': '🏠 Hjemmebane tips', 'shock': '💥 Sjokk tips', 'draw': '🤝 Uavgjort tips' };
+    showToast(messages[mode] || '🎲 Tips generert');
 }
-console.log('✅ randomTips function defined');
 
 function showToast(message, type = 'success') {
-    const colors = {
-        'success': '#28a745',
-        'warning': '#ffc107',
-        'error': '#dc3545',
-        'info': '#17a2b8'
-    };
-    
-    const textColors = {
-        'success': 'white',
-        'warning': '#000',
-        'error': 'white',
-        'info': 'white'
-    };
-    
+    const colors = { 'success': '#28a745', 'warning': '#ffc107', 'error': '#dc3545', 'info': '#17a2b8' };
+    const textColors = { 'success': 'white', 'warning': '#000', 'error': 'white', 'info': 'white' };
     const toast = document.createElement('div');
-    toast.className = 'toast-notification';
     toast.textContent = message;
-    toast.style.cssText = `
-        position: fixed;
-        top: 80px;
-        right: 20px;
-        background-color: ${colors[type] || colors.success};
-        color: ${textColors[type] || textColors.success};
-        padding: 15px 25px;
-        border-radius: 5px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        z-index: 9999;
-        font-size: 16px;
-        font-weight: 500;
-        animation: slideIn 0.3s ease-out;
-    `;
-    
+    toast.style.cssText = `position:fixed;top:80px;right:20px;background-color:${colors[type]||colors.success};color:${textColors[type]||'white'};padding:15px 25px;border-radius:5px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:9999;font-size:16px;font-weight:500;animation:slideIn 0.3s ease-out;`;
     document.body.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease-in';
-        setTimeout(() => document.body.removeChild(toast), 300);
-    }, 3000);
+    setTimeout(() => { toast.style.animation = 'slideOut 0.3s ease-in'; setTimeout(() => document.body.removeChild(toast), 300); }, 3000);
 }
 
 function clearAllTips() {
-    if (!confirm('🗑️ Er du sikker på at du vil nullstille alle tips?')) {
-        return;
-    }
-    
-    // Nullstill alle kamptips
-    const rows = document.querySelectorAll('tbody tr');
-    rows.forEach((row, index) => {
+    if (!confirm('🗑️ Er du sikker på at du vil nullstille alle tips?')) return;
+    document.querySelectorAll('tbody tr').forEach((row, index) => {
         const kampId = index + 1;
-        const homeInput = document.getElementById('home_' + kampId);
-        const awayInput = document.getElementById('away_' + kampId);
-        const resultSelect = document.getElementById('result_' + kampId);
-        
-        if (homeInput) homeInput.value = '';
-        if (awayInput) awayInput.value = '';
-        if (resultSelect) {
-            resultSelect.selectedIndex = 0;
-            resultSelect.value = '';
-        }
+        const h = document.getElementById('home_' + kampId);
+        const a = document.getElementById('away_' + kampId);
+        const r = document.getElementById('result_' + kampId);
+        if (h) h.value = ''; if (a) a.value = '';
+        if (r) { r.selectedIndex = 0; r.value = ''; }
     });
-    
-    // Nullstill alle gruppeplasseringer
-    const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-    grupper.forEach(gruppe => {
-        const teams = gruppeData[gruppe];
-        teams.forEach(team => {
-            const selectElement = document.querySelector(`select[name="gruppe_${gruppe}_${team}"]`);
-            if (selectElement) {
-                selectElement.value = '';
-                selectElement.style.borderColor = '';
-                selectElement.style.backgroundColor = '';
-            }
-            const statsElement = document.getElementById(`stats_${gruppe}_${team}`);
-            if (statsElement) {
-                statsElement.textContent = '';
-            }
+    ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(gruppe => {
+        gruppeData[gruppe].forEach(team => {
+            const sel = document.querySelector(`select[name="gruppe_${gruppe}_${team}"]`);
+            if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.backgroundColor = ''; }
+            const stats = document.getElementById(`stats_${gruppe}_${team}`);
+            if (stats) stats.textContent = '';
         });
     });
-    
     showToast('✅ Alle tips er nullstilt!');
 }
 
 function validateGroupPositions(gruppeNavn) {
-    // Hent alle select-elementer for denne gruppen
     const selects = document.querySelectorAll(`select[data-gruppe="${gruppeNavn}"]`);
-    const selectedValues = [];
-    
-    selects.forEach(select => {
-        if (select.value) {
-            selectedValues.push(select.value);
-        }
+    const vals = [];
+    selects.forEach(s => { if (s.value) vals.push(s.value); });
+    const dups = vals.filter((v, i) => vals.indexOf(v) !== i);
+    selects.forEach(s => {
+        if (dups.includes(s.value)) { s.style.borderColor = 'red'; s.style.backgroundColor = '#ffe6e6'; }
+        else { s.style.borderColor = ''; s.style.backgroundColor = ''; }
     });
-    
-    // Sjekk for duplikater
-    const duplicates = selectedValues.filter((value, index) => selectedValues.indexOf(value) !== index);
-    
-    if (duplicates.length > 0) {
-        // Vis feilmelding
-        selects.forEach(select => {
-            if (duplicates.includes(select.value)) {
-                select.style.borderColor = 'red';
-                select.style.backgroundColor = '#ffe6e6';
-            }
-        });
-        return false;
-    } else {
-        // Fjern feilmarkering
-        selects.forEach(select => {
-            select.style.borderColor = '';
-            select.style.backgroundColor = '';
-        });
-        return true;
-    }
+    return dups.length === 0;
 }
 
-// Valider alle grupper før innsending
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
     if (form) {
         form.addEventListener('submit', function(e) {
             let hasErrors = false;
-            const grupper = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'];
-            
-            grupper.forEach(gruppe => {
-                if (!validateGroupPositions(gruppe)) {
-                    hasErrors = true;
-                }
-            });
-            
-            if (hasErrors) {
-                e.preventDefault();
-                showToast('⚠️ Feil: Hvert lag i en gruppe må ha unik plassering (1-4). Sjekk de røde feltene.', 'warning');
-                return false;
-            }
+            ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => { if (!validateGroupPositions(g)) hasErrors = true; });
+            if (hasErrors) { e.preventDefault(); showToast('⚠️ Hvert lag må ha unik plassering (1-4).', 'warning'); }
         });
     }
 });
 
 function updateResult(kampId) {
-    const homeInput = document.getElementById('home_' + kampId);
-    const awayInput = document.getElementById('away_' + kampId);
-    const resultSelect = document.getElementById('result_' + kampId);
-    
-    const homeGoals = parseInt(homeInput.value);
-    const awayGoals = parseInt(awayInput.value);
-    
-    if (isNaN(homeGoals) || isNaN(awayGoals)) {
-        resultSelect.selectedIndex = 0;
-        resultSelect.value = '';
-        return;
-    }
-    
-    if (homeGoals > awayGoals) {
-        resultSelect.value = 'H';
-    } else if (homeGoals === awayGoals) {
-        resultSelect.value = 'U';
-    } else {
-        resultSelect.value = 'B';
-    }
+    const h = document.getElementById('home_' + kampId);
+    const a = document.getElementById('away_' + kampId);
+    const r = document.getElementById('result_' + kampId);
+    const hg = parseInt(h.value), ag = parseInt(a.value);
+    if (isNaN(hg) || isNaN(ag)) { r.selectedIndex = 0; return; }
+    r.value = hg > ag ? 'H' : hg === ag ? 'U' : 'B';
 }
+
+function foresla8delsfinale() {
+    const grupper = ['A','B','C','D','E','F','G','H','I','J','K','L'];
+    const kandidater = [], tredjeplasser = [];
+    grupper.forEach(gruppe => {
+        const plasseringer = {};
+        gruppeData[gruppe].forEach(lag => {
+            const sel = document.querySelector(`select[name="gruppe_${gruppe}_${lag}"]`);
+            if (sel && sel.value) plasseringer[parseInt(sel.value)] = lag;
+        });
+        if (plasseringer[1]) kandidater.push(plasseringer[1]);
+        if (plasseringer[2]) kandidater.push(plasseringer[2]);
+        if (plasseringer[3]) tredjeplasser.push(plasseringer[3]);
+    });
+    if (kandidater.length === 0) { showToast('⚠️ Fyll inn gruppeplasseringer først!', 'warning'); return; }
+    const alle32 = [...kandidater, ...tredjeplasser.slice(0, 8)];
+    document.querySelectorAll('select[name^="sluttspill_8-delsfinale_"]').forEach((sel, idx) => {
+        sel.value = idx < alle32.length ? alle32[idx] : '';
+    });
+    showToast(`✅ Foreslått ${alle32.length} lag til 8-delsfinalen!`);
+}
+
+function foreslaKvartfinale() {
+    const kandidater = [];
+    document.querySelectorAll('select[name^="sluttspill_8-delsfinale_"]').forEach(sel => {
+        if (sel.value) kandidater.push(sel.value);
+    });
+    if (kandidater.length === 0) { showToast('⚠️ Fyll inn 8-delsfinale-lag først!', 'warning'); return; }
+    const shuffled = [...new Set(kandidater)].sort(() => Math.random() - 0.5).slice(0, 8);
+    document.querySelectorAll('select[name^="sluttspill_Kvartfinale_"]').forEach((sel, idx) => {
+        sel.value = idx < shuffled.length ? shuffled[idx] : '';
+    });
+    showToast(`✅ Foreslått ${shuffled.length} lag til kvartfinalen!`);
+}
+
+function foreslaFase(fase, fraFase, antall) {
+    const kandidater = [];
+    document.querySelectorAll(`select[name^="sluttspill_${fraFase}_"]`).forEach(sel => {
+        if (sel.value) kandidater.push(sel.value);
+    });
+    if (kandidater.length === 0) { showToast(`⚠️ Fyll inn ${fraFase}-lag først!`, 'warning'); return; }
+    const shuffled = [...new Set(kandidater)].sort(() => Math.random() - 0.5).slice(0, antall);
+    document.querySelectorAll(`select[name^="sluttspill_${fase}_"]`).forEach((sel, idx) => {
+        sel.value = idx < shuffled.length ? shuffled[idx] : '';
+    });
+    showToast(`✅ Foreslått ${shuffled.length} lag til ${fase}!`);
+}
+
 </script>
 
 </body>
