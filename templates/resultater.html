@@ -70,14 +70,9 @@
                             {% if kamp.fase == 'Gruppespill' %}
                             <tr>
                                 <td>{{ kamp.id }}</td>
-                                <td style="width: 130px;">
-                                    <input type="date" name="res_date_{{ kamp.id }}" class="form-control form-control-sm" 
-                                           value="{{ eksisterende_resultater[kamp.id].dato if kamp.id in eksisterende_resultater and eksisterende_resultater[kamp.id].dato else '' }}">
-                                </td>
+                                <td><small>{{ kamp.dato[8:10] }}/{{ kamp.dato[5:7] if kamp.dato else '' }}</small></td>
                                 <td>
-                                    <span class="badge bg-{% if kamp.fase == 'Gruppespill' %}primary{% elif kamp.fase == 'Finale' %}danger{% else %}secondary{% endif %}">
-                                        {% if kamp.gruppe %}Gr. {{ kamp.gruppe }}{% else %}{{ kamp.fase }}{% endif %}
-                                    </span>
+                                    <span class="badge bg-primary">Gr. {{ kamp.gruppe }}</span>
                                 </td>
                                 <td>
                                     {% if kamp.hjemmelag is string %}

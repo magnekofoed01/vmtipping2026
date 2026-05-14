@@ -412,10 +412,10 @@ def resultater():
             mål_hjemme = request.form.get(f"res_home_{kamp['id']}")
             mål_borte = request.form.get(f"res_away_{kamp['id']}")
             resultat = request.form.get(f"res_result_{kamp['id']}")
-            dato = request.form.get(f"res_date_{kamp['id']}")
             if mål_hjemme and mål_borte and resultat:
                 hjemmelag = kamp['hjemmelag'][0] if isinstance(kamp['hjemmelag'], tuple) else kamp['hjemmelag']
                 bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
+                dato = kamp.get('dato', None)  # Bruk dato fra kampdata
                 c.execute('REPLACE INTO resultater (kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato) VALUES (?, ?, ?, ?, ?, ?, ?)',
                           (kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato))
 
