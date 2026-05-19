@@ -2,38 +2,113 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <title>Administrer - VM Tipping</title>
+    <title>Administrer - VM Tipping 2026</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        body {
+            background: #f0f7f0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .navbar {
+            background: linear-gradient(135deg, #1a3a1a 0%, #2d5a2d 100%) !important;
+            border-bottom: 4px solid #fff200;
+        }
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4em;
+            color: #fff200 !important;
+            letter-spacing: 1px;
+        }
+        .page-header {
+            background: linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)),
+                        url('https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=1200&auto=format&fit=crop') center/cover no-repeat;
+            color: white;
+            padding: 50px 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            border-bottom: 4px solid #fff200;
+        }
+        .page-header h1 { font-weight: 800; margin: 0; }
+        .stat-card {
+            border-radius: 12px;
+            border: none;
+            border-top: 4px solid #2d8a2d;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .stat-card h2 { font-size: 3em; font-weight: 800; }
+        .card {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        .card-header.bg-primary {
+            background: linear-gradient(135deg, #1a6b1a, #2d8a2d) !important;
+            border-radius: 12px 12px 0 0 !important;
+            border-bottom: 3px solid #fff200;
+        }
+        .card-header.bg-danger {
+            background: linear-gradient(135deg, #8b0000, #dc3545) !important;
+            border-radius: 12px 12px 0 0 !important;
+        }
         .danger-zone {
-            border: 2px solid #dc3545;
+            border: 2px solid #dc3545 !important;
             background-color: #fff5f5;
         }
-        .participant-row:hover {
-            background-color: #f8f9fa;
+        .participant-row:hover { background-color: #f0f7f0; }
+        .table thead th {
+            background: #e8f5e8;
+            color: #1a3a1a;
+            font-weight: 700;
+        }
+        .badge.bg-info {
+            background: #2d8a2d !important;
+        }
+        .btn-logout {
+            background: transparent;
+            border: 2px solid #fff200;
+            color: #fff200;
+            font-weight: 700;
+        }
+        .btn-logout:hover {
+            background: #fff200;
+            color: #1a3a1a;
+        }
+        footer {
+            background: linear-gradient(135deg, #1a3a1a, #2d5a2d) !important;
+            border-top: 4px solid #fff200;
+        }
+        .field-stripe {
+            height: 5px;
+            background: repeating-linear-gradient(90deg, #fff200 0px, #fff200 20px, transparent 20px, transparent 40px);
+            border-radius: 3px;
+            margin-bottom: 25px;
         }
     </style>
 </head>
-<body class="bg-light">
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<body>
+<nav class="navbar navbar-expand-lg mb-4">
     <div class="container-fluid">
-        <a class="navbar-brand" href="/">VM Tipping</a>
-        <div>
-            <a class="btn btn-outline-light me-2" href="/">Legg inn tips</a>
-            <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
-            <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
-            <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
-            <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
-            <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
-            <a class="btn btn-outline-light me-2" href="/poeng">Poengoversikt</a>
-            <a class="btn btn-outline-danger" href="/logout">🔓 Logg ut</a>
+        <a class="navbar-brand" href="/">⚽ VM Tipping 2026</a>
+        <div class="d-flex flex-wrap gap-1">
+            <a class="btn btn-outline-light btn-sm" href="/">Legg inn tips</a>
+            <a class="btn btn-outline-light btn-sm" href="/deltakere">Deltakere</a>
+            <a class="btn btn-outline-light btn-sm" href="/fasit">Vis fasit</a>
+            <a class="btn btn-outline-light btn-sm" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light btn-sm" href="/regler">Regler</a>
+            <a class="btn btn-outline-light btn-sm" href="/resultater">Legg inn fasit</a>
+            <a class="btn btn-outline-light btn-sm" href="/poeng">Poengoversikt</a>
+            <a class="btn btn-logout btn-sm" href="/logout">🔓 Logg ut</a>
         </div>
     </div>
 </nav>
 
 <div class="container">
-    <h1 class="mb-4">⚙️ Administrasjon</h1>
-    
+    <div class="page-header">
+        <h1>⚙️ Administrasjon</h1>
+        <div class="field-stripe mt-3"></div>
+        <p class="mb-0 opacity-75">VM Tipping 2026 – Admin panel</p>
+    </div>
+
     {% if melding %}
     <div class="alert {% if '✅' in melding %}alert-success{% else %}alert-danger{% endif %} alert-dismissible fade show" role="alert">
         {{ melding }}
@@ -43,26 +118,26 @@
 
     <!-- Statistikk -->
     <div class="row mb-4">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
-                    <h2 class="text-primary">{{ totalt_tips }}</h2>
-                    <p class="mb-0">Totalt antall tips</p>
+        <div class="col-md-6 mb-3">
+            <div class="card stat-card">
+                <div class="card-body text-center py-4">
+                    <h2 class="text-success">{{ totalt_tips }}</h2>
+                    <p class="mb-0 fw-bold">⚽ Totalt antall tips</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-body text-center">
+        <div class="col-md-6 mb-3">
+            <div class="card stat-card">
+                <div class="card-body text-center py-4">
                     <h2 class="text-success">{{ totalt_resultater }}</h2>
-                    <p class="mb-0">Registrerte resultater</p>
+                    <p class="mb-0 fw-bold">🏆 Registrerte resultater</p>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Deltakere -->
-    <div class="card shadow-sm mb-4">
+    <div class="card mb-4">
         <div class="card-header bg-primary text-white">
             <h4 class="mb-0">👥 Deltakere ({{ deltakere|length }})</h4>
         </div>
@@ -70,7 +145,7 @@
             {% if deltakere %}
             <div class="table-responsive">
                 <table class="table table-hover">
-                    <thead class="table-light">
+                    <thead>
                         <tr>
                             <th>Navn</th>
                             <th>Telefon</th>
@@ -92,9 +167,7 @@
                                     <input type="hidden" name="navn" value="{{ deltaker[0] }}">
                                     <input type="hidden" name="telefon" value="{{ deltaker[1] }}">
                                     <input type="hidden" name="epost" value="{{ deltaker[2] }}">
-                                    <button type="submit" class="btn btn-sm btn-danger">
-                                        🗑️ Slett tips
-                                    </button>
+                                    <button type="submit" class="btn btn-sm btn-danger">🗑️ Slett tips</button>
                                 </form>
                             </td>
                         </tr>
@@ -103,45 +176,39 @@
                 </table>
             </div>
             {% else %}
-            <p class="text-muted text-center">Ingen deltakere registrert ennå.</p>
+            <p class="text-muted text-center py-4">⚽ Ingen deltakere registrert ennå.</p>
             {% endif %}
         </div>
     </div>
 
     <!-- Faresone -->
-    <div class="card shadow-sm danger-zone mb-4">
+    <div class="card danger-zone mb-4">
         <div class="card-header bg-danger text-white">
             <h4 class="mb-0">⚠️ Faresone</h4>
         </div>
         <div class="card-body">
             <p class="text-danger"><strong>ADVARSEL:</strong> Disse handlingene kan ikke angres!</p>
-            
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Slett alle tips</h5>
-                            <p class="card-text">Sletter alle registrerte tips fra alle deltakere.</p>
+                            <h5 class="card-title">🗑️ Slett alle tips</h5>
+                            <p class="card-text text-muted">Sletter alle registrerte tips fra alle deltakere.</p>
                             <form method="POST" onsubmit="return confirm('ADVARSEL: Dette sletter ALLE tips! Er du helt sikker?');">
                                 <input type="hidden" name="action" value="slett_alle_tips">
-                                <button type="submit" class="btn btn-danger">
-                                    🗑️ Slett alle tips
-                                </button>
+                                <button type="submit" class="btn btn-danger">🗑️ Slett alle tips</button>
                             </form>
                         </div>
                     </div>
                 </div>
-                
                 <div class="col-md-6 mb-3">
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Slett alle resultater</h5>
-                            <p class="card-text">Sletter alle registrerte kampresultater/fasit.</p>
+                            <h5 class="card-title">🗑️ Slett alle resultater</h5>
+                            <p class="card-text text-muted">Sletter alle registrerte kampresultater/fasit.</p>
                             <form method="POST" onsubmit="return confirm('ADVARSEL: Dette sletter ALLE resultater! Er du helt sikker?');">
                                 <input type="hidden" name="action" value="slett_alle_resultater">
-                                <button type="submit" class="btn btn-danger">
-                                    🗑️ Slett alle resultater
-                                </button>
+                                <button type="submit" class="btn btn-danger">🗑️ Slett alle resultater</button>
                             </form>
                         </div>
                     </div>
@@ -150,13 +217,13 @@
         </div>
     </div>
 
-    <div class="mt-4">
-        <a href="/" class="btn btn-secondary">Tilbake til tipping</a>
+    <div class="mt-4 mb-5">
+        <a href="/" class="btn btn-secondary">← Tilbake til tipping</a>
     </div>
 </div>
 
-<footer class="bg-dark text-white text-center py-3 mt-5">
-    <p class="mb-0">VM Tipping 2026 ⚽</p>
+<footer class="text-white text-center py-4 mt-5">
+    <p class="mb-0">⚽ VM Tipping 2026 ⚽</p>
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

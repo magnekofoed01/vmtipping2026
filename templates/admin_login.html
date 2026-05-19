@@ -7,57 +7,104 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+                        url('https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=1600&auto=format&fit=crop') center/cover no-repeat fixed;
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-family: 'Segoe UI', sans-serif;
         }
         .login-card {
-            max-width: 400px;
+            max-width: 420px;
             width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
         }
         .login-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a3a1a 0%, #2d5a2d 100%);
             color: white;
-            padding: 30px;
-            border-radius: 10px 10px 0 0;
+            padding: 35px 30px;
+            text-align: center;
+            border-bottom: 4px solid #fff200;
+        }
+        .ball-icon {
+            font-size: 4em;
+            margin-bottom: 10px;
+            display: block;
+            animation: bounce 1.5s infinite alternate;
+        }
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-10px); }
+        }
+        .login-header h2 {
+            font-weight: 800;
+            letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        .login-header .tournament {
+            color: #fff200;
+            font-weight: 600;
+            font-size: 1.1em;
         }
         .login-body {
             background: white;
-            padding: 30px;
-            border-radius: 0 0 10px 10px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 35px 30px;
         }
-        .admin-icon {
-            font-size: 3em;
-            margin-bottom: 10px;
+        .form-control:focus {
+            border-color: #2d8a2d;
+            box-shadow: 0 0 0 0.2rem rgba(45,138,45,0.25);
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #1a6b1a, #2d8a2d);
+            border: none;
+            color: white;
+            font-weight: 700;
+            letter-spacing: 1px;
+            padding: 12px;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+        .btn-login:hover {
+            background: linear-gradient(135deg, #145214, #1a6b1a);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .field-lines {
+            height: 6px;
+            background: repeating-linear-gradient(90deg, #fff200 0px, #fff200 20px, transparent 20px, transparent 40px);
+            margin-bottom: 25px;
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
     <div class="login-card">
-        <div class="login-header text-center">
-            <div class="admin-icon">🔐</div>
+        <div class="login-header">
+            <span class="ball-icon">⚽</span>
             <h2>Admin Innlogging</h2>
-            <p class="mb-0">VM Tipping 2026</p>
+            <div class="tournament">🏆 VM Tipping 2026</div>
         </div>
         <div class="login-body">
+            <div class="field-lines"></div>
+
             {% if feil %}
             <div class="alert alert-danger" role="alert">
                 {{ feil }}
             </div>
             {% endif %}
-            
+
             <form method="POST">
                 <div class="mb-4">
-                    <label for="passord" class="form-label">Passord</label>
-                    <input type="password" class="form-control form-control-lg" id="passord" name="passord" 
+                    <label for="passord" class="form-label fw-bold">🔑 Passord</label>
+                    <input type="password" class="form-control form-control-lg" id="passord" name="passord"
                            placeholder="Skriv inn admin passord" required autofocus>
                 </div>
-                
                 <div class="d-grid gap-2">
-                    <button type="submit" class="btn btn-primary btn-lg">
+                    <button type="submit" class="btn btn-login btn-lg">
                         🔓 Logg inn
                     </button>
                     <a href="/" class="btn btn-outline-secondary">
@@ -65,9 +112,9 @@
                     </a>
                 </div>
             </form>
-            
+
             <div class="mt-4 text-center text-muted">
-                <small>Kun for administratorer</small>
+                <small>⚽ Kun for administratorer ⚽</small>
             </div>
         </div>
     </div>

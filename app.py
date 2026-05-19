@@ -283,20 +283,11 @@ def index():
                           (navn, telefon, epost, kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat))
 
         for gruppe_navn, lag_liste in grupper.items():
-            for lag in lag_liste:
-                plassering = request.form.get(f"gruppe_{gruppe_navn}_{lag}")
-                if plassering:
-                    c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
-                              (navn, telefon, epost, gruppe_navn, lag, int(plassering)))
-
-        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2, 'Vinner': 1}
-        for fase, antall in fase_antall.items():
-            for i in range(antall):
-                lag = request.form.get(f"sluttspill_{fase}_{i}")
+            for plass in range(1, 5):
+                lag = request.form.get(f"fasit_{gruppe_navn}_plass_{plass}")
                 if lag:
-                    c.execute('INSERT INTO sluttspilltips (navn, telefon, epost, fase, lag) VALUES (?, ?, ?, ?, ?)',
-                              (navn, telefon, epost, fase, lag))
-
+                    c.execute('REPLACE INTO gruppefasit (gruppe, lag, plassering) VALUES (?, ?, ?)',
+                              (gruppe_navn, lag, plass))
         conn.commit()
         conn.close()
         return redirect('/')
@@ -511,7 +502,7 @@ def resultater():
                 plassering = request.form.get(f"fasit_{gruppe_navn}_{lag}")
                 if plassering:
                     c.execute('REPLACE INTO gruppefasit (gruppe, lag, plassering) VALUES (?, ?, ?)',
-                              (gruppe_navn, lag, int(plassering)))
+                              (gruppe_navn, lag, plassering))
         conn.commit()
         conn.close()
         return redirect('/resultater')

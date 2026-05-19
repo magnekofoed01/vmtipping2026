@@ -150,8 +150,12 @@
                                 </td>
                                 <td>{{ kamp.hjemmelag if kamp.hjemmelag is string else kamp.hjemmelag[0] }}</td>
                                 <td>{{ kamp.bortelag if kamp.bortelag is string else kamp.bortelag[0] }}</td>
-                                <td style="width: 60px;"><input type="number" name="home_{{ kamp.id }}" id="home_{{ kamp.id }}" class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
-                                <td style="width: 60px;"><input type="number" name="away_{{ kamp.id }}" id="away_{{ kamp.id }}" class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
+                                <td style="width: 60px;"><input type="number" name="home_{{ kamp.id }}" id="home_{{ kamp.id }}" 
+                                    data-team="{{ kamp.hjemmelag if kamp.hjemmelag is string else kamp.hjemmelag[0] }}"
+                                    class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
+                                <td style="width: 60px;"><input type="number" name="away_{{ kamp.id }}" id="away_{{ kamp.id }}" 
+                                    data-team="{{ kamp.bortelag if kamp.bortelag is string else kamp.bortelag[0] }}"
+                                    class="form-control form-control-sm" min="0" style="width: 55px;" onchange="updateResult({{ kamp.id }})"></td>
                                 <td style="width: 100px;">
                                     <select name="result_{{ kamp.id }}" id="result_{{ kamp.id }}" class="form-select form-select-sm" style="background-color: #e9ecef; pointer-events: none;">
                                         <option value="">-</option>
@@ -187,23 +191,21 @@
                             </button>
                         </div>
                         <div class="card-body p-2">
-                            {% for lag in lag_liste %}
-                            <div class="lag-row d-flex justify-content-between align-items-center" style="padding: 8px;">
-                                <div style="flex: 1;">
-                                    <span style="font-size: 0.95em;">{{ lag }}</span>
-                                    <small class="text-muted ms-2" id="stats_{{ gruppe_navn }}_{{ lag }}"></small>
+                            {% for plass in range(1, 5) %}
+                            <div class="lag-row d-flex justify-content-between align-items-center" style="padding: 6px 8px;">
+                                <div style="min-width: 28px;">
+                                    <strong class="text-muted">{{ plass }}.</strong>
                                 </div>
-                                <select name="gruppe_{{ gruppe_navn }}_{{ lag }}" 
-                                        class="form-select form-select-sm gruppe-select" 
+                                <select name="gruppe_{{ gruppe_navn }}_plass_{{ plass }}"
+                                        class="form-select form-select-sm gruppe-select"
                                         data-gruppe="{{ gruppe_navn }}"
-                                        onchange="validateGroupPositions('{{ gruppe_navn }}')"
-                                        required 
-                                        style="width: 80px; font-size: 0.9em;">
-                                    <option value="">Velg</option>
-                                    <option value="1">1.</option>
-                                    <option value="2">2.</option>
-                                    <option value="3">3.</option>
-                                    <option value="4">4.</option>
+                                        data-plass="{{ plass }}"
+                                        onchange="validateGroupPositions2('{{ gruppe_navn }}')"
+                                        style="font-size: 0.85em;">
+                                    <option value="">Velg lag</option>
+                                    {% for lag in lag_liste %}
+                                    <option value="{{ lag }}">{{ lag }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                             {% endfor %}
@@ -288,7 +290,7 @@
 </div>
 
 <script>
-console.log('✅ JavaScript loaded - version 3.2');
+console.log('✅ JavaScript loaded - version 3.3');
 
 const gruppeData = {
     {% for gruppe_navn, lag_liste in grupper.items() %}
@@ -297,51 +299,6 @@ const gruppeData = {
     ]{% if not loop.last %},{% endif %}
     {% endfor %}
 };
-
-function calculateGroupStandings(gruppeNavn) {
-    const teams = gruppeData[gruppeNavn];
-    const standings = {};
-    teams.forEach(team => { standings[team] = { points: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0, played: 0 }; });
-    const rows = document.querySelectorAll(`tbody tr[data-gruppe="${gruppeNavn}"]`);
-    rows.forEach((row) => {
-        const kampId = row.getAttribute('data-kamp-id');
-        const cells = row.querySelectorAll('td');
-        let homeTeamRaw = cells[3].textContent.replace(/\s+/g, ' ').trim();
-        let awayTeamRaw = cells[4].textContent.replace(/\s+/g, ' ').trim();
-        let homeTeam = teams.find(t => t === homeTeamRaw) || teams.find(t => homeTeamRaw.includes(t) || t.includes(homeTeamRaw));
-        let awayTeam = teams.find(t => t === awayTeamRaw) || teams.find(t => awayTeamRaw.includes(t) || t.includes(awayTeamRaw));
-        if (!homeTeam || !awayTeam) return;
-        const homeGoals = parseInt(document.getElementById('home_' + kampId)?.value);
-        const awayGoals = parseInt(document.getElementById('away_' + kampId)?.value);
-        if (!isNaN(homeGoals) && !isNaN(awayGoals)) {
-            standings[homeTeam].played++; standings[awayTeam].played++;
-            standings[homeTeam].goalsFor += homeGoals; standings[homeTeam].goalsAgainst += awayGoals;
-            standings[awayTeam].goalsFor += awayGoals; standings[awayTeam].goalsAgainst += homeGoals;
-            if (homeGoals > awayGoals) { standings[homeTeam].points += 3; }
-            else if (awayGoals > homeGoals) { standings[awayTeam].points += 3; }
-            else { standings[homeTeam].points += 1; standings[awayTeam].points += 1; }
-            standings[homeTeam].goalDifference = standings[homeTeam].goalsFor - standings[homeTeam].goalsAgainst;
-            standings[awayTeam].goalDifference = standings[awayTeam].goalsFor - standings[awayTeam].goalsAgainst;
-        }
-    });
-    const sortedTeams = teams.slice().sort((a, b) => {
-        if (standings[b].points !== standings[a].points) return standings[b].points - standings[a].points;
-        if (standings[b].goalDifference !== standings[a].goalDifference) return standings[b].goalDifference - standings[a].goalDifference;
-        return standings[b].goalsFor - standings[a].goalsFor;
-    });
-    sortedTeams.forEach((team, index) => {
-        const sel = document.querySelector(`select[name="gruppe_${gruppeNavn}_${team}"]`);
-        if (sel) sel.value = index + 1;
-        const statsEl = document.getElementById(`stats_${gruppeNavn}_${team}`);
-        if (statsEl) statsEl.textContent = `(${standings[team].points}p, ${standings[team].goalDifference > 0 ? '+' : ''}${standings[team].goalDifference})`;
-    });
-    validateGroupPositions(gruppeNavn);
-}
-
-function calculateAllGroups() {
-    ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => calculateGroupStandings(g));
-    showToast('✅ Alle gruppetabeller er beregnet!');
-}
 
 const teamRankings = {
     "Mexico": 15, "Sør-Afrika": 60, "Sør-Korea": 25, "Tsjekkia": 45,
@@ -358,15 +315,35 @@ const teamRankings = {
     "England": 4, "Kroatia": 9, "Ghana": 58, "Panama": 52
 };
 
+function updateResult(kampId) {
+    const h = document.getElementById('home_' + kampId);
+    const a = document.getElementById('away_' + kampId);
+    const r = document.getElementById('result_' + kampId);
+    if (!h || !a || !r) return;
+    const hg = parseInt(h.value), ag = parseInt(a.value);
+    if (isNaN(hg) || isNaN(ag)) { r.selectedIndex = 0; return; }
+    r.value = hg > ag ? 'H' : hg === ag ? 'U' : 'B';
+}
+
+function showToast(message, type = 'success') {
+    const colors = { 'success': '#28a745', 'warning': '#ffc107', 'error': '#dc3545', 'info': '#17a2b8' };
+    const textColors = { 'success': 'white', 'warning': '#000', 'error': 'white', 'info': 'white' };
+    const toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = `position:fixed;top:80px;right:20px;background-color:${colors[type]||colors.success};color:${textColors[type]||'white'};padding:15px 25px;border-radius:5px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:9999;font-size:16px;font-weight:500;animation:slideIn 0.3s ease-out;`;
+    document.body.appendChild(toast);
+    setTimeout(() => { toast.style.animation = 'slideOut 0.3s ease-in'; setTimeout(() => document.body.removeChild(toast), 300); }, 3000);
+}
+
 function randomTips(mode = 'fifa') {
-    document.querySelectorAll('tbody tr').forEach((row) => {
-        const homeInput = row.querySelector('input[name^="home_"]');
-        const awayInput = row.querySelector('input[name^="away_"]');
+    let count = 0;
+    document.querySelectorAll('tbody tr[data-kamp-id]').forEach((row) => {
+        const kampId = row.getAttribute('data-kamp-id');
+        const homeInput = document.getElementById('home_' + kampId);
+        const awayInput = document.getElementById('away_' + kampId);
         if (!homeInput || !awayInput) return;
-        const kampId = homeInput.name.replace('home_', '');
-        const cells = row.querySelectorAll('td');
-        const homeTeam = cells[3].textContent.replace(/\s+/g, ' ').trim();
-        const awayTeam = cells[4].textContent.replace(/\s+/g, ' ').trim();
+        const homeTeam = homeInput.getAttribute('data-team') || '';
+        const awayTeam = awayInput.getAttribute('data-team') || '';
         const homeRanking = teamRankings[homeTeam] || 50;
         const awayRanking = teamRankings[awayTeam] || 50;
         let homeGoals, awayGoals;
@@ -396,87 +373,94 @@ function randomTips(mode = 'fifa') {
         }
         homeInput.value = homeGoals; awayInput.value = awayGoals;
         updateResult(parseInt(kampId));
+        count++;
     });
     calculateAllGroups();
     const messages = { 'fifa': '⭐ FIFA-ranking tips', 'random': '🎯 Tilfeldige tips', 'home': '🏠 Hjemmebane tips', 'shock': '💥 Sjokk tips', 'draw': '🤝 Uavgjort tips' };
-    showToast(messages[mode] || '🎲 Tips generert');
-}
-
-function showToast(message, type = 'success') {
-    const colors = { 'success': '#28a745', 'warning': '#ffc107', 'error': '#dc3545', 'info': '#17a2b8' };
-    const textColors = { 'success': 'white', 'warning': '#000', 'error': 'white', 'info': 'white' };
-    const toast = document.createElement('div');
-    toast.textContent = message;
-    toast.style.cssText = `position:fixed;top:80px;right:20px;background-color:${colors[type]||colors.success};color:${textColors[type]||'white'};padding:15px 25px;border-radius:5px;box-shadow:0 4px 6px rgba(0,0,0,0.1);z-index:9999;font-size:16px;font-weight:500;animation:slideIn 0.3s ease-out;`;
-    document.body.appendChild(toast);
-    setTimeout(() => { toast.style.animation = 'slideOut 0.3s ease-in'; setTimeout(() => document.body.removeChild(toast), 300); }, 3000);
+    showToast((messages[mode] || '🎲 Tips generert') + ` (${count} kamper)`);
 }
 
 function clearAllTips() {
     if (!confirm('🗑️ Er du sikker på at du vil nullstille alle tips?')) return;
-    document.querySelectorAll('tbody tr').forEach((row, index) => {
-        const kampId = index + 1;
+    document.querySelectorAll('tbody tr[data-kamp-id]').forEach((row) => {
+        const kampId = row.getAttribute('data-kamp-id');
         const h = document.getElementById('home_' + kampId);
         const a = document.getElementById('away_' + kampId);
         const r = document.getElementById('result_' + kampId);
-        if (h) h.value = ''; if (a) a.value = '';
+        if (h) h.value = '';
+        if (a) a.value = '';
         if (r) { r.selectedIndex = 0; r.value = ''; }
     });
     ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(gruppe => {
-        gruppeData[gruppe].forEach(team => {
-            const sel = document.querySelector(`select[name="gruppe_${gruppe}_${team}"]`);
+        for (let plass = 1; plass <= 4; plass++) {
+            const sel = document.querySelector(`select[name="gruppe_${gruppe}_plass_${plass}"]`);
             if (sel) { sel.value = ''; sel.style.borderColor = ''; sel.style.backgroundColor = ''; }
-            const stats = document.getElementById(`stats_${gruppe}_${team}`);
-            if (stats) stats.textContent = '';
-        });
+        }
     });
     showToast('✅ Alle tips er nullstilt!');
 }
 
-function validateGroupPositions(gruppeNavn) {
+function validateGroupPositions2(gruppeNavn) {
     const selects = document.querySelectorAll(`select[data-gruppe="${gruppeNavn}"]`);
     const vals = [];
     selects.forEach(s => { if (s.value) vals.push(s.value); });
     const dups = vals.filter((v, i) => vals.indexOf(v) !== i);
     selects.forEach(s => {
-        if (dups.includes(s.value)) { s.style.borderColor = 'red'; s.style.backgroundColor = '#ffe6e6'; }
+        if (s.value && dups.includes(s.value)) { s.style.borderColor = 'red'; s.style.backgroundColor = '#ffe6e6'; }
         else { s.style.borderColor = ''; s.style.backgroundColor = ''; }
     });
     return dups.length === 0;
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            let hasErrors = false;
-            ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => { if (!validateGroupPositions(g)) hasErrors = true; });
-            if (hasErrors) { e.preventDefault(); showToast('⚠️ Hvert lag må ha unik plassering (1-4).', 'warning'); }
-        });
-    }
-});
+function calculateGroupStandings(gruppeNavn) {
+    const teams = gruppeData[gruppeNavn];
+    const standings = {};
+    teams.forEach(team => { standings[team] = { points: 0, goalsFor: 0, goalsAgainst: 0, goalDifference: 0 }; });
+    document.querySelectorAll(`tbody tr[data-gruppe="${gruppeNavn}"]`).forEach((row) => {
+        const kampId = row.getAttribute('data-kamp-id');
+        const homeInput = document.getElementById('home_' + kampId);
+        const awayInput = document.getElementById('away_' + kampId);
+        if (!homeInput || !awayInput) return;
+        const homeTeam = homeInput.getAttribute('data-team');
+        const awayTeam = awayInput.getAttribute('data-team');
+        if (!homeTeam || !awayTeam) return;
+        const homeGoals = parseInt(homeInput.value);
+        const awayGoals = parseInt(awayInput.value);
+        if (isNaN(homeGoals) || isNaN(awayGoals)) return;
+        standings[homeTeam].goalsFor += homeGoals; standings[homeTeam].goalsAgainst += awayGoals;
+        standings[awayTeam].goalsFor += awayGoals; standings[awayTeam].goalsAgainst += homeGoals;
+        standings[homeTeam].goalDifference = standings[homeTeam].goalsFor - standings[homeTeam].goalsAgainst;
+        standings[awayTeam].goalDifference = standings[awayTeam].goalsFor - standings[awayTeam].goalsAgainst;
+        if (homeGoals > awayGoals) { standings[homeTeam].points += 3; }
+        else if (awayGoals > homeGoals) { standings[awayTeam].points += 3; }
+        else { standings[homeTeam].points += 1; standings[awayTeam].points += 1; }
+    });
+    const sortedTeams = teams.slice().sort((a, b) => {
+        if (standings[b].points !== standings[a].points) return standings[b].points - standings[a].points;
+        if (standings[b].goalDifference !== standings[a].goalDifference) return standings[b].goalDifference - standings[a].goalDifference;
+        return standings[b].goalsFor - standings[a].goalsFor;
+    });
+    sortedTeams.forEach((team, index) => {
+        const sel = document.querySelector(`select[name="gruppe_${gruppeNavn}_plass_${index + 1}"]`);
+        if (sel) sel.value = team;
+    });
+    validateGroupPositions2(gruppeNavn);
+}
 
-function updateResult(kampId) {
-    const h = document.getElementById('home_' + kampId);
-    const a = document.getElementById('away_' + kampId);
-    const r = document.getElementById('result_' + kampId);
-    const hg = parseInt(h.value), ag = parseInt(a.value);
-    if (isNaN(hg) || isNaN(ag)) { r.selectedIndex = 0; return; }
-    r.value = hg > ag ? 'H' : hg === ag ? 'U' : 'B';
+function calculateAllGroups() {
+    ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => calculateGroupStandings(g));
+    showToast('✅ Alle gruppetabeller er beregnet!');
 }
 
 function foresla8delsfinale() {
-    const grupper = ['A','B','C','D','E','F','G','H','I','J','K','L'];
     const kandidater = [], tredjeplasser = [];
-    grupper.forEach(gruppe => {
-        const plasseringer = {};
-        gruppeData[gruppe].forEach(lag => {
-            const sel = document.querySelector(`select[name="gruppe_${gruppe}_${lag}"]`);
-            if (sel && sel.value) plasseringer[parseInt(sel.value)] = lag;
-        });
-        if (plasseringer[1]) kandidater.push(plasseringer[1]);
-        if (plasseringer[2]) kandidater.push(plasseringer[2]);
-        if (plasseringer[3]) tredjeplasser.push(plasseringer[3]);
+    ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(gruppe => {
+        const p1 = document.querySelector(`select[name="gruppe_${gruppe}_plass_1"]`);
+        const p2 = document.querySelector(`select[name="gruppe_${gruppe}_plass_2"]`);
+        const p3 = document.querySelector(`select[name="gruppe_${gruppe}_plass_3"]`);
+        if (p1 && p1.value) kandidater.push(p1.value);
+        if (p2 && p2.value) kandidater.push(p2.value);
+        if (p3 && p3.value) tredjeplasser.push(p3.value);
     });
     if (kandidater.length === 0) { showToast('⚠️ Fyll inn gruppeplasseringer først!', 'warning'); return; }
     const alle32 = [...kandidater, ...tredjeplasser.slice(0, 8)];
@@ -488,31 +472,32 @@ function foresla8delsfinale() {
 
 function foreslaKvartfinale() {
     const kandidater = [];
-    document.querySelectorAll('select[name^="sluttspill_8-delsfinale_"]').forEach(sel => {
-        if (sel.value) kandidater.push(sel.value);
-    });
+    document.querySelectorAll('select[name^="sluttspill_8-delsfinale_"]').forEach(sel => { if (sel.value) kandidater.push(sel.value); });
     if (kandidater.length === 0) { showToast('⚠️ Fyll inn 8-delsfinale-lag først!', 'warning'); return; }
     const shuffled = [...new Set(kandidater)].sort(() => Math.random() - 0.5).slice(0, 8);
-    document.querySelectorAll('select[name^="sluttspill_Kvartfinale_"]').forEach((sel, idx) => {
-        sel.value = idx < shuffled.length ? shuffled[idx] : '';
-    });
+    document.querySelectorAll('select[name^="sluttspill_Kvartfinale_"]').forEach((sel, idx) => { sel.value = idx < shuffled.length ? shuffled[idx] : ''; });
     showToast(`✅ Foreslått ${shuffled.length} lag til kvartfinalen!`);
 }
 
 function foreslaFase(fase, fraFase, antall) {
     const kandidater = [];
-    document.querySelectorAll(`select[name^="sluttspill_${fraFase}_"]`).forEach(sel => {
-        if (sel.value) kandidater.push(sel.value);
-    });
+    document.querySelectorAll(`select[name^="sluttspill_${fraFase}_"]`).forEach(sel => { if (sel.value) kandidater.push(sel.value); });
     if (kandidater.length === 0) { showToast(`⚠️ Fyll inn ${fraFase}-lag først!`, 'warning'); return; }
     const shuffled = [...new Set(kandidater)].sort(() => Math.random() - 0.5).slice(0, antall);
-    document.querySelectorAll(`select[name^="sluttspill_${fase}_"]`).forEach((sel, idx) => {
-        sel.value = idx < shuffled.length ? shuffled[idx] : '';
-    });
+    document.querySelectorAll(`select[name^="sluttspill_${fase}_"]`).forEach((sel, idx) => { sel.value = idx < shuffled.length ? shuffled[idx] : ''; });
     showToast(`✅ Foreslått ${shuffled.length} lag til ${fase}!`);
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            let hasErrors = false;
+            ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(g => { if (!validateGroupPositions2(g)) hasErrors = true; });
+            if (hasErrors) { e.preventDefault(); showToast('⚠️ Hvert lag må ha unik plassering (1-4).', 'warning'); }
+        });
+    }
+});
 </script>
-
 </body>
 </html>
