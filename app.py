@@ -157,12 +157,28 @@ kampdata = {
 }
 
 sluttspill_datoer = {
-    "8-delsfinale": ["2026-06-28", "2026-06-29", "2026-06-30", "2026-07-01",
-                     "2026-07-02", "2026-07-03", "2026-07-04", "2026-07-04"],
+    "8-delsfinale": [
+        "2026-07-04",  # Kamp 1: Houston
+        "2026-07-04",  # Kamp 2: Philadelphia
+        "2026-07-05",  # Kamp 3: New York
+        "2026-07-06",  # Kamp 4: Mexico City
+        "2026-07-06",  # Kamp 5: Dallas
+        "2026-07-07",  # Kamp 6: Seattle
+        "2026-07-07",  # Kamp 7: Atlanta
+        "2026-07-07",  # Kamp 8: Vancouver
+    ],
     "Kvartfinale": ["2026-07-09", "2026-07-10", "2026-07-11", "2026-07-12"],
     "Semifinale": ["2026-07-14", "2026-07-15"],
     "Bronsefinale": ["2026-07-18"],
     "Finale": ["2026-07-19"],
+}
+
+sluttspill_datoer_tekst = {
+    '8-delsfinale': '4. – 7. jul 2026',
+    'Kvartfinale': '9. – 12. jul 2026',
+    'Semifinale': '14. – 15. jul 2026 (TV2)',
+    'Bronsefinale': '18. jul 2026 (NRK)',
+    'Finale': '19. jul 2026 (NRK)',
 }
 
 kamper = []
@@ -217,6 +233,12 @@ kamper.append({
     "kamp_nr": 1, "dato": sluttspill_datoer["Finale"][0]
 })
 
+# Sorter gruppespill-kamper på dato
+kamper_gruppespill = [k for k in kamper if k['fase'] == 'Gruppespill']
+kamper_andre = [k for k in kamper if k['fase'] != 'Gruppespill']
+kamper_gruppespill.sort(key=lambda k: k.get('dato') or '9999')
+kamper = kamper_gruppespill + kamper_andre
+
 alle_lag = []
 for lag_liste in grupper.values():
     alle_lag.extend(lag_liste)
@@ -251,7 +273,7 @@ def index():
                     c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
                               (navn, telefon, epost, gruppe_navn, lag, int(plassering)))
 
-        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2}
+        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2, 'Vinner': 1}
         for fase, antall in fase_antall.items():
             for i in range(antall):
                 lag = request.form.get(f"sluttspill_{fase}_{i}")
@@ -316,8 +338,14 @@ def deltakere():
 def fasit():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
-    c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato FROM resultater ORDER BY kamp_id')
+    c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato FROM resultater ORDER BY dato ASC, kamp_id ASC')
     resultater_data = c.fetchall()
+    c.execute('SELECT fase, lag FROM sluttspillfasit ORDER BY fase')
+    sluttspill_fasit = {}
+    for fase, lag in c.fetchall():
+        if fase not in sluttspill_fasit:
+            sluttspill_fasit[fase] = []
+        sluttspill_fasit[fase].append(lag)
     conn.close()
     fasit_liste = []
     hjemmeseire = uavgjort = borteseire = totalt_mål = 0
@@ -330,7 +358,9 @@ def fasit():
         totalt_mål += mål_hjemme + mål_borte
     statistikk = {'hjemmeseire': hjemmeseire, 'uavgjort': uavgjort, 'borteseire': borteseire,
                   'totalt_mål': totalt_mål, 'gjennomsnitt_mål': totalt_mål / len(fasit_liste) if fasit_liste else 0}
-    return render_template('fasit.html', fasit=fasit_liste, statistikk=statistikk)
+    return render_template('fasit.html', fasit=fasit_liste, statistikk=statistikk,
+                           sluttspill_fasit=sluttspill_fasit,
+                           sluttspill_datoer_tekst=sluttspill_datoer_tekst)
 
 
 @app.route('/dagsvinner')
@@ -408,6 +438,14 @@ def resultater():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     if request.method == 'POST':
+        action = request.form.get('action', 'lagre')
+
+        if action == 'slett_sluttspill':
+            c.execute('DELETE FROM sluttspillfasit')
+            conn.commit()
+            conn.close()
+            return redirect('/resultater')
+
         for kamp in kamper:
             mål_hjemme = request.form.get(f"res_home_{kamp['id']}")
             mål_borte = request.form.get(f"res_away_{kamp['id']}")
@@ -415,17 +453,20 @@ def resultater():
             if mål_hjemme and mål_borte and resultat:
                 hjemmelag = kamp['hjemmelag'][0] if isinstance(kamp['hjemmelag'], tuple) else kamp['hjemmelag']
                 bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
-                dato = kamp.get('dato', None)  # Bruk dato fra kampdata
+                dato = kamp.get('dato', None)
                 c.execute('REPLACE INTO resultater (kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato) VALUES (?, ?, ?, ?, ?, ?, ?)',
                           (kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato))
 
-        # Sluttspillfasit
-        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2}
-        for fase, antall in fase_antall.items():
-            for i in range(antall):
-                lag = request.form.get(f"sluttspill_fasit_{fase}_{i}")
-                if lag:
-                    c.execute('INSERT OR IGNORE INTO sluttspillfasit (fase, lag) VALUES (?, ?)', (fase, lag))
+        # Sluttspillfasit - slett og sett inn på nytt for å støtte endringer
+        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2, 'Vinner': 1}
+        for fase in fase_antall:
+            har_input = any(request.form.get(f"sluttspill_fasit_{fase}_{i}") for i in range(fase_antall[fase]))
+            if har_input:
+                c.execute('DELETE FROM sluttspillfasit WHERE fase = ?', (fase,))
+                for i in range(fase_antall[fase]):
+                    lag = request.form.get(f"sluttspill_fasit_{fase}_{i}")
+                    if lag:
+                        c.execute('INSERT OR IGNORE INTO sluttspillfasit (fase, lag) VALUES (?, ?)', (fase, lag))
 
         for gruppe_navn, lag_liste in grupper.items():
             for lag in lag_liste:
@@ -495,7 +536,8 @@ def poeng():
                 'Kvartfinale': 5,
                 'Semifinale': 10,
                 'Bronsefinale': 10,
-                'Finale': 20
+                'Finale': 20,
+                'Vinner': 25
             }
             bruker_poeng[key] += fase_poeng.get(fase, 2)
 

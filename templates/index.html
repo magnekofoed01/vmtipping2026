@@ -234,18 +234,19 @@
             </div>
 
             {% set fase_info = [
-                ('8-delsfinale', 16, '2026-06-28', '2p/lag'),
-                ('Kvartfinale', 8, '2026-07-09', '5p/lag'),
-                ('Semifinale', 4, '2026-07-14', '10p/lag'),
-                ('Bronsefinale', 2, '2026-07-18', '10p/lag'),
-                ('Finale', 2, '2026-07-19', '20p/lag')
+                ('8-delsfinale', 16, '4.–7. jul', '2p/lag'),
+                ('Kvartfinale', 8, '9.–12. jul', '5p/lag'),
+                ('Semifinale', 4, '14.–15. jul', '10p/lag'),
+                ('Bronsefinale', 2, '18. jul', '10p/lag'),
+                ('Finale', 2, '19. jul', '20p/lag'),
+                ('Vinner', 1, '19. jul', '25p')
             ] %}
 
             {% for fase, antall_lag, dato, poeng_tekst in fase_info %}
             <div class="card mb-3">
                 <div class="card-header bg-secondary text-white d-flex justify-content-between">
                     <strong>{{ fase }}</strong>
-                    <small>{{ dato[8:10] }}/{{ dato[5:7] }}/{{ dato[0:4] }} – {{ antall_lag }} lag – <strong>{{ poeng_tekst }}</strong></small>
+                    <small>📅 {{ dato }} – {{ antall_lag }} lag – <strong>{{ poeng_tekst }}</strong></small>
                     {% if fase == '8-delsfinale' %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="foresla8delsfinale()">💡 Foreslå fra gruppetips</button>
                     {% endif %}
@@ -257,6 +258,9 @@
                     {% endif %}
                     {% if fase == 'Finale' or fase == 'Bronsefinale' %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('{{ fase }}', 'Semifinale', 2)">💡 Foreslå fra semifinale</button>
+                    {% endif %}
+                    {% if fase == 'Vinner' %}
+                    <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('Vinner', 'Finale', 1)">💡 Foreslå fra finale</button>
                     {% endif %}
                 </div>
                 <div class="card-body p-3">

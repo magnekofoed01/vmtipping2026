@@ -154,14 +154,15 @@
         <div class="mt-4">
             <h3>🏆 Sluttspillfasit</h3>
             <div class="alert alert-warning py-2">
-                <small>Legg inn hvilke lag som faktisk gikk videre i sluttspillet</small>
+                <small>Legg inn hvilke lag som faktisk gikk videre i sluttspillet. Lagre på nytt for å oppdatere.</small>
             </div>
             {% set fase_info = [
                 ('8-delsfinale', 16, '2p/lag'),
                 ('Kvartfinale', 8, '5p/lag'),
                 ('Semifinale', 4, '10p/lag'),
                 ('Bronsefinale', 2, '10p/lag'),
-                ('Finale', 2, '20p/lag')
+                ('Finale', 2, '20p/lag'),
+                ('Vinner', 1, '25p')
             ] %}
             {% for fase, antall_lag, poeng_tekst in fase_info %}
             <div class="card mb-3">
@@ -191,7 +192,8 @@
         </div>
 
         <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary btn-lg">Lagre all fasit</button>
+            <button type="submit" name="action" value="lagre" class="btn btn-primary btn-lg">Lagre all fasit</button>
+            <button type="submit" name="action" value="slett_sluttspill" class="btn btn-danger btn-lg ms-2" onclick="return confirm('Slett all sluttspillfasit?')">🗑️ Slett sluttspillfasit</button>
             <a href="/" class="btn btn-secondary btn-lg ms-2">Tilbake</a>
         </div>
     </form>

@@ -58,7 +58,7 @@
                         <h5 class="mb-0">
                             Kamp {{ resultat.kamp_id }}
                             {% if resultat.dato %}
-                            <span class="badge bg-light text-dark float-end">{{ resultat.dato }}</span>
+                            <span class="badge bg-light text-dark float-end">{{ resultat.dato[8:10] }}/{{ resultat.dato[5:7] }}</span>
                             {% endif %}
                         </h5>
                     </div>
@@ -154,6 +154,33 @@
         <a href="/resultater" class="btn btn-primary me-2">Rediger fasit</a>
         <a href="/poeng" class="btn btn-success">Se poengoversikt</a>
     </div>
+
+    {% if sluttspill_fasit %}
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">🏆 Sluttspillresultater</h5>
+        </div>
+        <div class="card-body">
+            {% set fase_rekkefølge = ['8-delsfinale', 'Kvartfinale', 'Semifinale', 'Bronsefinale', 'Finale'] %}
+            {% set fase_poeng = {'8-delsfinale': '2p', 'Kvartfinale': '5p', 'Semifinale': '10p', 'Bronsefinale': '10p', 'Finale': '20p'} %}
+            {% for fase in fase_rekkefølge %}
+                {% if fase in sluttspill_fasit %}
+                <div class="mb-3">
+                    <h6>
+                        {{ fase }}
+                        <span class="badge bg-warning text-dark ms-1">{{ fase_poeng[fase] }}/lag</span>
+                        <small class="text-muted ms-2">📅 {{ sluttspill_datoer_tekst[fase] }}</small>
+                    </h6>
+                    {% for lag in sluttspill_fasit[fase] %}
+                    <span class="badge bg-success me-1 mb-1" style="font-size:0.9em;">{{ lag }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 
 <footer class="bg-dark text-white text-center py-3 mt-5">
