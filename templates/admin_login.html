@@ -43,16 +43,16 @@
             <p class="mb-0">VM Tipping 2026</p>
         </div>
         <div class="login-body">
-            {% if error %}
+            {% if feil %}
             <div class="alert alert-danger" role="alert">
-                ❌ {{ error }}
+                {{ feil }}
             </div>
             {% endif %}
             
             <form method="POST">
                 <div class="mb-4">
-                    <label for="password" class="form-label">Passord</label>
-                    <input type="password" class="form-control form-control-lg" id="password" name="password" 
+                    <label for="passord" class="form-label">Passord</label>
+                    <input type="password" class="form-control form-control-lg" id="passord" name="passord" 
                            placeholder="Skriv inn admin passord" required autofocus>
                 </div>
                 

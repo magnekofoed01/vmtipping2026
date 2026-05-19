@@ -667,7 +667,7 @@ def login():  # ← SKAL IKKE ha @krever_innlogging her!
             return redirect(url_for('administrer'))
         else:
             feil = "❌ Feil passord"
-    return render_template('login.html', feil=feil)
+    return render_template('admin_login.html', feil=feil)
 
 
 @app.route('/logout')

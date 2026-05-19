@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: vmtipping2026
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
