@@ -3,16 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Admin-innlogging – VM Tipping 2026</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-<div class="container" style="max-width:400px;margin-top:80px;">
+<div style="max-width:400px;margin:80px auto;">
     <h2>🔐 Admin-innlogging</h2>
     {% if feil %}<p style="color:red;">{{ feil }}</p>{% endif %}
     <form method="post">
         <label>Passord:</label><br>
         <input type="password" name="passord" autofocus style="width:100%;padding:8px;margin:10px 0;">
-        <button type="submit" class="btn">Logg inn</button>
+        <br>
+        <button type="submit">Logg inn</button>
     </form>
     <br>
     <a href="/">← Tilbake til forsiden</a>

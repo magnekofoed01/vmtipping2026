@@ -445,14 +445,28 @@ def administrer():
             c.execute('DELETE FROM sluttspillfasit')
             conn.commit()
             melding = "✅ Alle resultater er slettet!"
-    c.execute('SELECT navn, telefon, epost, COUNT(*) as antall FROM tips GROUP BY navn, telefon, epost ORDER BY navn')
-    deltakere = c.fetchall()
+    # Hent alle unike deltakere fra alle tre tabeller
+    c.execute('''
+        SELECT navn, telefon, epost FROM tips
+        UNION
+        SELECT navn, telefon, epost FROM gruppetips
+        UNION
+        SELECT navn, telefon, epost FROM sluttspilltips
+        ORDER BY navn
+    ''')
+    alle = c.fetchall()
+    deltakere_med_antall = []
+    for navn, telefon, epost in alle:
+        c.execute('SELECT COUNT(*) FROM tips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
+        antall = c.fetchone()[0]
+        deltakere_med_antall.append((navn, telefon, epost, antall))
+    
     c.execute('SELECT COUNT(*) FROM tips')
     totalt_tips = c.fetchone()[0]
     c.execute('SELECT COUNT(*) FROM resultater')
     totalt_resultater = c.fetchone()[0]
     conn.close()
-    return render_template('administrer.html', deltakere=deltakere, totalt_tips=totalt_tips,
+    return render_template('administrer.html', deltakere=deltakere_med_antall, totalt_tips=totalt_tips,
                            totalt_resultater=totalt_resultater, melding=melding)
 
 
@@ -644,7 +658,7 @@ def send_email(rangering):
 
 
 @app.route('/login', methods=['GET', 'POST'])
-def login():
+def login():  # ← SKAL IKKE ha @krever_innlogging her!
     feil = None
     if request.method == 'POST':
         passord = request.form.get('passord', '')
