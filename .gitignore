@@ -29,6 +29,7 @@ instance/
 
 # Database
 *.db-journal
+*.db
 
 # IDE
 .vscode/

@@ -1,11 +1,27 @@
-from flask import Flask, render_template, request, redirect
-import sqlite3
-import smtplib
+from flask import Flask, render_template, request, redirect, session, url_for
+from functools import wraps
+from werkzeug.security import check_password_hash
+from dotenv import load_dotenv
+import sqlite3, smtplib, os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
+load_dotenv()
+
 app = Flask(__name__)
+app.secret_key = os.environ.get('SECRET_KEY', 'fallback_nokkel_bytt_meg')
+ADMIN_PASSORD_HASH = os.environ.get('ADMIN_PASSORD_HASH', '')
+SMTP_PASSORD = os.environ.get('SMTP_PASSORD', '')
+SMTP_AVSENDER = os.environ.get('SMTP_AVSENDER', '')
 DB_FILE = 'tips.db'
+
+def krever_innlogging(f):
+    @wraps(f)
+    def dekorert(*args, **kwargs):
+        if not session.get('admin_innlogget'):
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return dekorert
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -398,6 +414,7 @@ def dagsvinner():
 
 
 @app.route('/administrer', methods=['GET', 'POST'])
+@krever_innlogging
 def administrer():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -410,16 +427,22 @@ def administrer():
             epost = request.form.get('epost')
             if navn and telefon and epost:
                 c.execute('DELETE FROM tips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
+                c.execute('DELETE FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
+                c.execute('DELETE FROM sluttspilltips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
                 conn.commit()
                 melding = f"✅ Alle tips for {navn} er slettet!"
             else:
                 melding = "❌ Mangler informasjon for å slette tips."
         elif action == 'slett_alle_tips':
             c.execute('DELETE FROM tips')
+            c.execute('DELETE FROM gruppetips')
+            c.execute('DELETE FROM sluttspilltips')
             conn.commit()
             melding = "✅ Alle tips er slettet!"
         elif action == 'slett_alle_resultater':
             c.execute('DELETE FROM resultater')
+            c.execute('DELETE FROM gruppefasit')
+            c.execute('DELETE FROM sluttspillfasit')
             conn.commit()
             melding = "✅ Alle resultater er slettet!"
     c.execute('SELECT navn, telefon, epost, COUNT(*) as antall FROM tips GROUP BY navn, telefon, epost ORDER BY navn')
@@ -434,6 +457,7 @@ def administrer():
 
 
 @app.route('/resultater', methods=['GET', 'POST'])
+@krever_innlogging
 def resultater():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
@@ -520,6 +544,25 @@ def poeng():
             elif int(mål_hjemme) == res['mål_hjemme'] or int(mål_borte) == res['mål_borte']: poeng += 1
             bruker_poeng[key] += poeng
 
+    # Gruppetips poengberegning
+    c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
+    gruppefasit = {}
+    for gruppe, lag, plassering in c.fetchall():
+        if gruppe not in gruppefasit:
+            gruppefasit[gruppe] = {}
+        gruppefasit[gruppe][lag] = plassering
+
+    c.execute('SELECT navn, telefon, epost, gruppe, lag, plassering FROM gruppetips')
+    for navn, telefon, epost, gruppe, lag, plassering in c.fetchall():
+        key = (navn, telefon, epost)
+        if key not in bruker_poeng: bruker_poeng[key] = 0
+        if gruppe in gruppefasit and lag in gruppefasit[gruppe]:
+            fasit_plassering = gruppefasit[gruppe][lag]
+            if fasit_plassering == plassering:
+                bruker_poeng[key] += 2  # Riktig plassering i gruppe
+            elif abs(fasit_plassering - plassering) == 1:
+                bruker_poeng[key] += 1  # En plass unna
+
     c.execute('SELECT fase, lag FROM sluttspillfasit')
     sluttspill_fasit = {}
     for fase, lag in c.fetchall():
@@ -570,8 +613,8 @@ def generate_email_html(rangering):
 
 
 def send_email(rangering):
-    sender = 'magne.kofoed@gmail.com'
-    password = 'gpnb xbbf jhuk trzl'
+    sender = SMTP_AVSENDER
+    password = SMTP_PASSORD
     subject = 'Oppdatert poengoversikt - VM Tipping'
     body = '<h2>Poengoversikt</h2><table border="1"><tr><th>Plass</th><th>Navn</th><th>Poeng</th></tr>'
     for plass, ((navn, telefon, epost), poeng) in enumerate(rangering, 1):
@@ -598,6 +641,25 @@ def send_email(rangering):
             return True
         except:
             return False
+
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    feil = None
+    if request.method == 'POST':
+        passord = request.form.get('passord', '')
+        if ADMIN_PASSORD_HASH and check_password_hash(ADMIN_PASSORD_HASH, passord):
+            session['admin_innlogget'] = True
+            return redirect(url_for('administrer'))
+        else:
+            feil = "❌ Feil passord"
+    return render_template('login.html', feil=feil)
+
+
+@app.route('/logout')
+def logout():
+    session.pop('admin_innlogget', None)
+    return redirect(url_for('index'))
 
 
 if __name__ == '__main__':
