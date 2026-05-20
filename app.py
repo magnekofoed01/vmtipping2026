@@ -293,7 +293,7 @@ def index():
                 if lag:
                     c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
                               (navn, telefon, epost, gruppe_navn, lag, plass))
-        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2, 'Vinner': 1}
+        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Finale': 2, 'Vinner': 1}
         for fase, antall in fase_antall.items():
             for i in range(antall):
                 lag = request.form.get(f"sluttspill_{fase}_{i}")
@@ -448,7 +448,7 @@ def resultater():
                 bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
                 c.execute('REPLACE INTO resultater (kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato) VALUES (?, ?, ?, ?, ?, ?, ?)',
                           (kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, kamp.get('dato')))
-        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Bronsefinale': 2, 'Finale': 2, 'Vinner': 1}
+        fase_antall = {'8-delsfinale': 16, 'Kvartfinale': 8, 'Semifinale': 4, 'Finale': 2, 'Vinner': 1}
         for fase in fase_antall:
             har_input = any(request.form.get(f"sluttspill_fasit_{fase}_{i}") for i in range(fase_antall[fase]))
             if har_input:
@@ -516,7 +516,7 @@ def poeng():
     for fase, lag in c.fetchall():
         if fase not in sluttspill_fasit: sluttspill_fasit[fase] = set()
         sluttspill_fasit[fase].add(lag)
-    fase_poeng = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Bronsefinale': 10, 'Finale': 15, 'Vinner': 30}
+    fase_poeng = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
     c.execute('SELECT navn, telefon, epost, fase, lag FROM sluttspilltips')
     for navn, telefon, epost, fase, lag in c.fetchall():
         key = (navn, telefon, epost)

@@ -236,12 +236,11 @@
             </div>
 
             {% set fase_info = [
-                ('8-delsfinale', 16, '4.–7. jul', '2p/lag'),
-                ('Kvartfinale', 8, '9.–12. jul', '5p/lag'),
+                ('8-delsfinale', 16, '4.–7. jul', '5p/lag'),
+                ('Kvartfinale', 8, '9.–12. jul', '7p/lag'),
                 ('Semifinale', 4, '14.–15. jul', '10p/lag'),
-                ('Bronsefinale', 2, '18. jul', '10p/lag'),
-                ('Finale', 2, '19. jul', '20p/lag'),
-                ('Vinner', 1, '19. jul', '25p')
+                ('Finale', 2, '19. jul', '15p/lag'),
+                ('Vinner', 1, '19. jul', '30p')
             ] %}
 
             {% for fase, antall_lag, dato, poeng_tekst in fase_info %}
@@ -258,8 +257,8 @@
                     {% if fase == 'Semifinale' %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('Semifinale', 'Kvartfinale', 4)">💡 Foreslå fra kvartfinale</button>
                     {% endif %}
-                    {% if fase == 'Finale' or fase == 'Bronsefinale' %}
-                    <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('{{ fase }}', 'Semifinale', 2)">💡 Foreslå fra semifinale</button>
+                    {% if fase == 'Finale' %}
+                    <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('Finale', 'Semifinale', 2)">💡 Foreslå fra semifinale</button>
                     {% endif %}
                     {% if fase == 'Vinner' %}
                     <button type="button" class="btn btn-sm btn-warning" onclick="foreslaFase('Vinner', 'Finale', 1)">💡 Foreslå fra finale</button>

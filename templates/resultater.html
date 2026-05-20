@@ -161,12 +161,11 @@
                 <small>Legg inn hvilke lag som faktisk gikk videre i sluttspillet. Lagre på nytt for å oppdatere.</small>
             </div>
             {% set fase_info = [
-                ('8-delsfinale', 16, '2p/lag'),
-                ('Kvartfinale', 8, '5p/lag'),
+                ('8-delsfinale', 16, '5p/lag'),
+                ('Kvartfinale', 8, '7p/lag'),
                 ('Semifinale', 4, '10p/lag'),
-                ('Bronsefinale', 2, '10p/lag'),
-                ('Finale', 2, '20p/lag'),
-                ('Vinner', 1, '25p')
+                ('Finale', 2, '15p/lag'),
+                ('Vinner', 1, '30p')
             ] %}
             {% for fase, antall_lag, poeng_tekst in fase_info %}
             <div class="card mb-3">
