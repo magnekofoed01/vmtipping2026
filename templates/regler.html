@@ -48,95 +48,68 @@
             <h3>Slik fungerer poengsystemet</h3>
         </div>
         <div class="card-body">
-            <p class="lead">For hver kamp du tipper, kan du tjene opptil <span class="points">3 poeng</span>!</p>
+            <p class="lead">For hver kamp du tipper, kan du tjene opptil <span class="points">5 poeng</span>!</p>
             
             <div class="rule-box">
-                <h4>📊 Poengberegning:</h4>
+                <h4>📊 Poengberegning per kamp:</h4>
                 <ul class="list-unstyled ms-3">
                     <li class="mb-3">
-                        <strong class="points">+1 poeng</strong> - Riktig resultat (Hjemme/Uavgjort/Borte)
-                        <div class="example-box">
-                            <strong>Eksempel:</strong> Du tipper at Canada vinner mot Mexico (resultat: H)<br>
-                            Faktisk resultat: Canada 2-1 Mexico (H) ✅<br>
-                            <span class="text-success">Du får 1 poeng for riktig resultat!</span>
-                        </div>
+                        <strong class="points">+2 poeng</strong> - Riktig HUB (Hjemme/Uavgjort/Borte)
                     </li>
-                    
                     <li class="mb-3">
-                        <strong class="points">+2 poeng</strong> - Eksakt riktig antall mål for begge lag
-                        <div class="example-box">
-                            <strong>Eksempel:</strong> Du tipper Canada 3-1 Mexico<br>
-                            Faktisk resultat: Canada 3-1 Mexico ✅<br>
-                            <span class="text-success">Du får 2 ekstra poeng for eksakt resultat!</span><br>
-                            <span class="text-info">(Totalt 3 poeng: 1 for riktig resultat + 2 for eksakt)</span>
-                        </div>
+                        <strong class="points">+1 poeng</strong> - Riktig antall mål for hjemmelaget
                     </li>
-                    
                     <li class="mb-3">
-                        <strong class="points">+1 poeng</strong> - Riktig antall mål for ett av lagene
+                        <strong class="points">+1 poeng</strong> - Riktig antall mål for bortelaget
+                    </li>
+                    <li class="mb-3">
+                        <strong class="points">= 5 poeng</strong> - Helt riktig tippet resultat (maks per kamp)
                         <div class="example-box">
-                            <strong>Eksempel:</strong> Du tipper Canada 2-1 Mexico<br>
-                            Faktisk resultat: Canada 2-0 Mexico ✅<br>
-                            <span class="text-success">Du får 1 ekstra poeng for riktig hjemmemål!</span><br>
-                            <span class="text-info">(Totalt 2 poeng: 1 for riktig resultat + 1 for ett riktig mål)</span>
+                            <strong>Eksempel:</strong> Kampen ender 3-2, du tipper 3-0<br>
+                            → 2p for riktig HUB + 1p for riktig hjemmemål = <strong>3 poeng</strong><br><br>
+                            <strong>Eksempel:</strong> Kampen ender 3-2, du tipper 3-2<br>
+                            → Eksakt riktig = <strong>5 poeng</strong>
                         </div>
                     </li>
-                </ul>
-            </div>
-
-            <div class="alert alert-info mt-4">
-                <h5>💡 Tips for maksimal poengsum:</h5>
-                <ul>
-                    <li>Studer lagenes form og tidligere resultater</li>
-                    <li>Sjekk skadelister og oppsett</li>
-                    <li>Tenk realistisk - eksakte tips gir mest poeng!</li>
-                    <li>Husk at poengsummen oppdateres når fasit legges inn</li>
                 </ul>
             </div>
 
             <div class="rule-box">
-                <h4>📋 Eksempel på fullstendig poengberegning:</h4>
+                <h4>📋 Eksempel på poengberegning:</h4>
                 <table class="table table-bordered mt-3">
                     <thead class="table-dark">
-                        <tr>
-                            <th>Ditt tips</th>
-                            <th>Faktisk resultat</th>
-                            <th>Poeng</th>
-                            <th>Forklaring</th>
-                        </tr>
+                        <tr><th>Ditt tips</th><th>Faktisk resultat</th><th>Poeng</th><th>Forklaring</th></tr>
                     </thead>
                     <tbody>
                         <tr class="table-success">
-                            <td>Canada 2-1 Mexico (H)</td>
-                            <td>Canada 2-1 Mexico (H)</td>
-                            <td class="points">3</td>
-                            <td>Eksakt resultat! (1 + 2 poeng)</td>
+                            <td>Canada 2-1 Mexico</td><td>Canada 2-1 Mexico</td>
+                            <td class="points">5</td><td>Eksakt riktig!</td>
                         </tr>
                         <tr class="table-info">
-                            <td>USA 3-1 Tyskland (H)</td>
-                            <td>USA 3-2 Tyskland (H)</td>
-                            <td class="points">2</td>
-                            <td>Riktig resultat + riktig hjemmemål (1 + 1 poeng)</td>
+                            <td>USA 3-0 Tyskland</td><td>USA 3-2 Tyskland</td>
+                            <td class="points">3</td><td>Riktig HUB (2p) + riktig hjemmemål (1p)</td>
+                        </tr>
+                        <tr class="table-info">
+                            <td>Brasil 1-2 Argentina</td><td>Brasil 2-2 Argentina</td>
+                            <td class="points">3</td><td>Riktig HUB (2p) + riktig bortemål (1p)</td>
                         </tr>
                         <tr class="table-warning">
-                            <td>Brasil 1-1 Argentina (U)</td>
-                            <td>Brasil 2-2 Argentina (U)</td>
-                            <td class="points">1</td>
-                            <td>Kun riktig resultat (1 poeng)</td>
+                            <td>Brasil 1-1 Argentina</td><td>Brasil 2-2 Argentina</td>
+                            <td class="points">2</td><td>Kun riktig HUB (2p)</td>
                         </tr>
                         <tr class="table-danger">
-                            <td>Canada 3-0 Mexico (H)</td>
-                            <td>Canada 0-1 Mexico (B)</td>
-                            <td class="points">0</td>
-                            <td>Feil resultat, ingen poeng</td>
+                            <td>Canada 3-0 Mexico</td><td>Canada 0-1 Mexico</td>
+                            <td class="points">0</td><td>Feil HUB, ingen poeng</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="alert alert-success mt-4">
-                <h5>🏆 Vinner:</h5>
-                <p class="mb-0">Den som har flest poeng når alle kampene er ferdigspilt, vinner!</p>
+                <h5>🏆 Innsats og premiering:</h5>
+                <p><strong>Innsats:</strong> 100,- per person (maks ett tips)</p>
+                <p>Alt som kommer inn går ut igjen i premier. Ca 10% av deltakerne får premie.</p>
+                <p><strong>Dagspremier:</strong> Beste tipper per dag i gruppespillet vinner dagspremie (~200,-). Hvis flere deler førsteplass – ingen vinner, potten overføres til neste dag.</p>
             </div>
         </div>
     </div>
@@ -146,30 +119,13 @@
             <h3>Gruppetipping</h3>
         </div>
         <div class="card-body">
-            <p class="lead">I tillegg til å tippe kampresultater, kan du også tippe plasseringene i hver gruppe!</p>
-            
+            <p class="lead">Tipp plasseringer i hver gruppe etter gruppespillet!</p>
             <div class="rule-box">
                 <h4>🏅 Poengberegning for gruppetips:</h4>
                 <ul class="list-unstyled ms-3">
                     <li class="mb-3">
-                        <strong class="points">+3 poeng</strong> - For hvert lag du plasserer riktig (1., 2., 3. eller 4. plass)
-                        <div class="example-box">
-                            <strong>Eksempel - Gruppe A:</strong><br>
-                            Du tipper: 1. Mexico, 2. Sør-Korea, 3. Tsjekkia, 4. Sør-Afrika<br>
-                            Faktisk sluttplassering: 1. Mexico ✅, 2. Sør-Afrika ❌, 3. Sør-Korea ❌, 4. Tsjekkia ✅<br>
-                            <span class="text-success">Du får 6 poeng (3+3) for Mexico og Tsjekkia!</span>
-                        </div>
+                        <strong class="points">+2 poeng</strong> - For hvert lag du plasserer riktig (1., 2., 3. eller 4. plass)
                     </li>
-                </ul>
-            </div>
-
-            <div class="alert alert-warning mt-4">
-                <h5>⚠️ Viktig om gruppetips:</h5>
-                <ul>
-                    <li>Gruppetips gir poeng kun når alle kampene i gruppespillet er ferdigspilt</li>
-                    <li>Du må tippe alle lag i alle grupper</li>
-                    <li>Hvert lag kan kun få én plassering (1-4) i sin gruppe</li>
-                    <li>Totalt kan du tjene opptil 144 poeng på gruppetips (48 lag × 3 poeng)</li>
                 </ul>
             </div>
         </div>
@@ -188,12 +144,12 @@
                         <tr><th>Runde</th><th>Dato</th><th>Antall lag</th><th>Poeng per riktig lag</th></tr>
                     </thead>
                     <tbody>
-                        <tr><td>8-delsfinale</td><td>28. jun – 4. jul</td><td>32 lag</td><td class="points">2p</td></tr>
-                        <tr><td>Kvartfinale</td><td>9. – 12. jul</td><td>8 lag</td><td class="points">5p</td></tr>
-                        <tr><td>Semifinale</td><td>14. – 15. jul</td><td>4 lag</td><td class="points">10p</td></tr>
+                        <tr><td>8-delsfinale</td><td>4.–7. jul</td><td>32 lag</td><td class="points">5p</td></tr>
+                        <tr><td>Kvartfinale</td><td>9.–12. jul</td><td>8 lag</td><td class="points">7p</td></tr>
+                        <tr><td>Semifinale</td><td>14.–15. jul</td><td>4 lag</td><td class="points">10p</td></tr>
                         <tr><td>Bronsefinale</td><td>18. jul</td><td>2 lag</td><td class="points">10p</td></tr>
-                        <tr class="table-warning"><td><strong>Finale</strong></td><td>19. jul</td><td>2 lag</td><td class="points">20p</td></tr>
-                        <tr class="table-danger"><td><strong>🏆 VM-vinner</strong></td><td>19. jul</td><td>1 lag</td><td class="points">25p</td></tr>
+                        <tr class="table-warning"><td><strong>Finale</strong></td><td>19. jul</td><td>2 lag</td><td class="points">15p</td></tr>
+                        <tr class="table-danger"><td><strong>🏆 VM-vinner</strong></td><td>19. jul</td><td>1 lag</td><td class="points">30p</td></tr>
                     </tbody>
                 </table>
                 <div class="example-box">
