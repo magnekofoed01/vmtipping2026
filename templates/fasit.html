@@ -181,6 +181,34 @@
     </div>
     {% endif %}
 
+    {% if gruppefasit %}
+    <div class="card shadow-sm mt-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">🏅 Endelige gruppeplasseringer</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+            {% for gruppe in ['A','B','C','D','E','F','G','H','I','J','K','L'] %}
+            {% if gruppe in gruppefasit %}
+            <div class="col-md-3 col-sm-4 col-6 mb-3">
+                <h6 class="fw-bold">Gruppe {{ gruppe }}</h6>
+                <ol class="ps-3 mb-0">
+                {% for plass in [1,2,3,4] %}
+                    {% for lag, p in gruppefasit[gruppe].items() %}
+                    {% if p == plass %}
+                    <li>{{ lag }}</li>
+                    {% endif %}
+                    {% endfor %}
+                {% endfor %}
+                </ol>
+            </div>
+            {% endif %}
+            {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
 </div>
 
 <footer class="bg-dark text-white text-center py-3 mt-5">

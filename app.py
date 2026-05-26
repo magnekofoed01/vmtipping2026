@@ -399,6 +399,11 @@ def fasit():
     for fase, lag in c.fetchall():
         if fase not in sluttspill_fasit: sluttspill_fasit[fase] = []
         sluttspill_fasit[fase].append(lag)
+    c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
+    gruppefasit = {}
+    for gruppe, lag, plassering in c.fetchall():
+        if gruppe not in gruppefasit: gruppefasit[gruppe] = {}
+        gruppefasit[gruppe][lag] = plassering
     conn.close()
     fasit_liste = []
     hjemmeseire = uavgjort = borteseire = totalt_mål = 0
@@ -412,7 +417,9 @@ def fasit():
     statistikk = {'hjemmeseire': hjemmeseire, 'uavgjort': uavgjort, 'borteseire': borteseire,
                   'totalt_mål': totalt_mål, 'gjennomsnitt_mål': totalt_mål / len(fasit_liste) if fasit_liste else 0}
     return render_template('fasit.html', fasit=fasit_liste, statistikk=statistikk,
-                           sluttspill_fasit=sluttspill_fasit, sluttspill_datoer_tekst=sluttspill_datoer_tekst)
+                           sluttspill_fasit=sluttspill_fasit,
+                           sluttspill_datoer_tekst=sluttspill_datoer_tekst,
+                           gruppefasit=gruppefasit)
 
 
 @app.route('/dagsvinner')

@@ -187,11 +187,11 @@
                     <div class="row">
                     {% for i in range(antall_lag) %}
                     <div class="col-md-3 col-sm-4 col-6 mb-2">
+                        {% set lagverdi = eksisterende_sluttspillfasit[fase][i] if fase in eksisterende_sluttspillfasit and i < eksisterende_sluttspillfasit[fase]|length else '' %}
                         <select name="sluttspill_fasit_{{ fase }}_{{ i }}" class="form-select form-select-sm">
                             <option value="">Lag {{ i+1 }}</option>
                             {% for alt in sluttspill_alternativer %}
-                            <option value="{{ alt }}"
-                                {% if fase in eksisterende_sluttspillfasit and alt in eksisterende_sluttspillfasit[fase] and loop.index0 == eksisterende_sluttspillfasit[fase].index(alt) %}selected{% endif %}>
+                            <option value="{{ alt }}" {% if alt == lagverdi %}selected{% endif %}>
                                 {{ alt }}
                             </option>
                             {% endfor %}
