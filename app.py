@@ -287,9 +287,10 @@ def index():
                 bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
                 c.execute('INSERT INTO tips (navn, telefon, epost, kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                           (navn, telefon, epost, kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat))
+        # Gruppetips - leser gruppe_NAVN_plass_PLASS fra index.html
         for gruppe_navn in grupper:
             for plass in range(1, 5):
-                lag = request.form.get(f"fasit_{gruppe_navn}_plass_{plass}")
+                lag = request.form.get(f"gruppe_{gruppe_navn}_plass_{plass}")
                 if lag:
                     c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
                               (navn, telefon, epost, gruppe_navn, lag, plass))
@@ -318,16 +319,71 @@ def deltakere():
     c = conn.cursor()
     c.execute('SELECT DISTINCT navn, telefon, epost FROM tips')
     unike_deltakere = c.fetchall()
+
+    c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat FROM resultater')
+    resultater_data = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3]} for row in c.fetchall()}
+
+    c.execute('SELECT fase, lag FROM sluttspillfasit')
+    sluttspill_fasit = {}
+    for fase, lag in c.fetchall():
+        if fase not in sluttspill_fasit: sluttspill_fasit[fase] = set()
+        sluttspill_fasit[fase].add(lag)
+
+    c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
+    gruppefasit = {}
+    for gruppe, lag, plassering in c.fetchall():
+        if gruppe not in gruppefasit: gruppefasit[gruppe] = {}
+        gruppefasit[gruppe][lag] = plassering
+
+    fase_poeng_tabell = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
+
     deltaker_liste = []
     for navn, telefon, epost in unike_deltakere:
         c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat FROM tips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
-        tips_formatert = [{'kamp_id': t[0], 'hjemmelag': t[1], 'bortelag': t[2], 'mål_hjemme': t[3], 'mål_borte': t[4], 'resultat': t[5]} for t in c.fetchall()]
+        tips_formatert = []
+        for t in c.fetchall():
+            kid, hjemmelag, bortelag, mh, mb, res = t
+            poeng = 0
+            if kid in resultater_data:
+                poeng = beregn_poeng(mh, mb, res, resultater_data[kid])
+            tips_formatert.append({'kamp_id': kid, 'hjemmelag': hjemmelag, 'bortelag': bortelag,
+                                   'mål_hjemme': mh, 'mål_borte': mb, 'resultat': res, 'poeng': poeng,
+                                   'har_fasit': kid in resultater_data})
+
+        # Gruppepoeng
+        c.execute('SELECT gruppe, lag, plassering FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
+        gruppe_tips_liste = []
+        gruppe_poeng_total = 0
+        for gruppe, lag, plassering in c.fetchall():
+            poeng = 0
+            fasit_plassering = None
+            if gruppe in gruppefasit and lag in gruppefasit[gruppe]:
+                fasit_plassering = gruppefasit[gruppe][lag]
+                if fasit_plassering == plassering:
+                    poeng = 2
+                    gruppe_poeng_total += 2
+            gruppe_tips_liste.append({'gruppe': gruppe, 'lag': lag, 'plassering': plassering,
+                                      'fasit_plassering': fasit_plassering, 'poeng': poeng})
+
         c.execute('SELECT fase, lag FROM sluttspilltips WHERE navn=? AND telefon=? AND epost=? ORDER BY fase', (navn, telefon, epost))
         sluttspill = {}
+        sluttspill_poeng = 0
         for fase, lag in c.fetchall():
             if fase not in sluttspill: sluttspill[fase] = []
-            sluttspill[fase].append(lag)
-        deltaker_liste.append({'navn': navn, 'telefon': telefon, 'epost': epost, 'tips': tips_formatert, 'sluttspilltips': sluttspill})
+            lag_poeng = 0
+            if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
+                lag_poeng = fase_poeng_tabell.get(fase, 5)
+                sluttspill_poeng += lag_poeng
+            sluttspill[fase].append({'lag': lag, 'poeng': lag_poeng})
+
+        totalt_poeng = sum(t['poeng'] for t in tips_formatert) + gruppe_poeng_total + sluttspill_poeng
+        deltaker_liste.append({'navn': navn, 'telefon': telefon, 'epost': epost,
+                               'tips': tips_formatert,
+                               'gruppe_tips': gruppe_tips_liste,
+                               'gruppe_poeng': gruppe_poeng_total,
+                               'sluttspilltips': sluttspill,
+                               'sluttspill_poeng': sluttspill_poeng,
+                               'totalt_poeng': totalt_poeng})
     conn.close()
     return render_template('deltakere.html', deltakere=deltaker_liste)
 
@@ -459,7 +515,7 @@ def resultater():
                         c.execute('INSERT OR IGNORE INTO sluttspillfasit (fase, lag) VALUES (?, ?)', (fase, lag))
         for gruppe_navn in grupper:
             for plass in range(1, 5):
-                lag = request.form.get(f"fasit_{gruppe_navn}_plass_{plass}")
+                lag = request.form.get(f"gruppe_{gruppe_navn}_plass_{plass}")  # ikke fasit_
                 if lag:
                     c.execute('REPLACE INTO gruppefasit (gruppe, lag, plassering) VALUES (?, ?, ?)', (gruppe_navn, lag, plass))
         conn.commit()
@@ -516,13 +572,13 @@ def poeng():
     for fase, lag in c.fetchall():
         if fase not in sluttspill_fasit: sluttspill_fasit[fase] = set()
         sluttspill_fasit[fase].add(lag)
-    fase_poeng = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
+    fase_poeng_tabell = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
     c.execute('SELECT navn, telefon, epost, fase, lag FROM sluttspilltips')
     for navn, telefon, epost, fase, lag in c.fetchall():
         key = (navn, telefon, epost)
         if key not in bruker_poeng: bruker_poeng[key] = 0
         if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
-            bruker_poeng[key] += fase_poeng.get(fase, 5)
+            bruker_poeng[key] += fase_poeng_tabell.get(fase, 5)
     conn.close()
     rangering = sorted(bruker_poeng.items(), key=lambda x: x[1], reverse=True)
     melding = None

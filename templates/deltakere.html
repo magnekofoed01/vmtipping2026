@@ -48,10 +48,9 @@
             {% for deltaker in deltakere %}
             <div class="col-md-6 mb-4">
                 <div class="card participant-card shadow-sm">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0">
-                            <i class="bi bi-person-circle"></i> {{ deltaker.navn }}
-                        </h5>
+                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">{{ deltaker.navn }}</h5>
+                        <span class="badge bg-warning text-dark fs-6">🏆 {{ deltaker.totalt_poeng }} poeng</span>
                     </div>
                     <div class="card-body">
                         <p class="mb-2">
@@ -74,6 +73,7 @@
                                         <th>Kamp</th>
                                         <th>Tips</th>
                                         <th>Resultat</th>
+                                        <th>Poeng</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -86,29 +86,76 @@
                                                 {% if tip.resultat == 'H' %}bg-info
                                                 {% elif tip.resultat == 'U' %}bg-warning
                                                 {% else %}bg-secondary{% endif %}">
-                                                {% if tip.resultat == 'H' %}Hjemme
-                                                {% elif tip.resultat == 'U' %}Uavgjort
-                                                {% else %}Borte{% endif %}
+                                                {{ tip.resultat }}
                                             </span>
+                                        </td>
+                                        <td>
+                                            {% if tip.har_fasit %}
+                                                <strong>{{ tip.poeng }}</strong>
+                                            {% else %}
+                                                <small class="text-muted">–</small>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
+                                <tfoot>
+                                    <tr class="table-success">
+                                        <td colspan="3"><strong>Sum kamppoeng</strong></td>
+                                        <td><strong>{{ deltaker.tips | sum(attribute='poeng') }}</strong></td>
+                                    </tr>
+                                </tfoot>
                             </table>
                         </div>
 
+                        {% if deltaker.gruppe_tips %}
+                        <hr>
+                        <h6>🏅 Gruppeplasseringer <span class="badge bg-warning text-dark">{{ deltaker.gruppe_poeng }} poeng</span></h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped tips-table">
+                                <thead class="table-dark">
+                                    <tr><th>Gr.</th><th>Lag</th><th>Tippet</th><th>Fasit</th><th>Poeng</th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for gt in deltaker.gruppe_tips | sort(attribute='gruppe') %}
+                                    <tr>
+                                        <td>{{ gt.gruppe }}</td>
+                                        <td>{{ gt.lag }}</td>
+                                        <td>{{ gt.plassering }}.</td>
+                                        <td>{% if gt.fasit_plassering %}{{ gt.fasit_plassering }}.{% else %}<small class="text-muted">–</small>{% endif %}</td>
+                                        <td>{% if gt.poeng > 0 %}<strong class="text-success">{{ gt.poeng }}</strong>{% else %}<small class="text-muted">–</small>{% endif %}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="table-success">
+                                        <td colspan="4"><strong>Sum gruppepoeng</strong></td>
+                                        <td><strong>{{ deltaker.gruppe_poeng }}</strong></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        {% endif %}
+
                         {% if deltaker.sluttspilltips %}
                         <hr>
-                        <h6>🏆 Sluttspilltips</h6>
-                        {% set fase_rekkefølge = ['8-delsfinale', 'Kvartfinale', 'Semifinale', 'Bronsefinale', 'Finale'] %}
-                        {% set fase_poeng = {'8-delsfinale': '2p', 'Kvartfinale': '5p', 'Semifinale': '10p', 'Bronsefinale': '10p', 'Finale': '20p'} %}
+                        <h6>🏆 Sluttspilltips <span class="badge bg-warning text-dark">{{ deltaker.sluttspill_poeng }} poeng</span></h6>
+                        {% set fase_rekkefølge = ['8-delsfinale', 'Kvartfinale', 'Semifinale', 'Finale', 'Vinner'] %}
+                        {% set fase_poeng_info = {'8-delsfinale': '5p/lag', 'Kvartfinale': '7p/lag', 'Semifinale': '10p/lag', 'Finale': '15p/lag', 'Vinner': '30p'} %}
                         {% for fase in fase_rekkefølge %}
                             {% if fase in deltaker.sluttspilltips %}
                             <div class="mb-2">
                                 <strong>{{ fase }}</strong>
-                                <span class="badge bg-warning text-dark ms-1">{{ fase_poeng[fase] }}/lag</span><br>
-                                {% for lag in deltaker.sluttspilltips[fase] %}
-                                <span class="badge bg-light text-dark border me-1">{{ lag }}</span>
+                                <small class="text-muted ms-1">({{ fase_poeng_info[fase] }})</small>
+                                {% set fase_sum = deltaker.sluttspilltips[fase] | sum(attribute='poeng') %}
+                                {% if fase_sum > 0 %}
+                                <span class="badge bg-success ms-1">+{{ fase_sum }}p</span>
+                                {% endif %}
+                                <br>
+                                {% for item in deltaker.sluttspilltips[fase] %}
+                                <span class="badge {% if item.poeng > 0 %}bg-success{% else %}bg-light text-dark border{% endif %} me-1">
+                                    {{ item.lag }}{% if item.poeng > 0 %} ✓{% endif %}
+                                </span>
                                 {% endfor %}
                             </div>
                             {% endif %}

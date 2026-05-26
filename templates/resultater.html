@@ -114,13 +114,23 @@
                 <div class="alert alert-warning py-2">
                     <small><strong>Admin:</strong> Legg inn plasseringer etter gruppespillet</small>
                 </div>
+                <div class="mb-2">
+                    <button type="button" class="btn btn-success btn-sm" onclick="beregnAlleGrupper()">
+                        🔄 Auto-beregn alle grupper fra fasit
+                    </button>
+                </div>
                 
                 <div style="max-height: 1200px; overflow-y: auto;">
                     <div class="row">
                     {% for gruppe_navn, lag_liste in grupper.items() %}
                     <div class="col-6 mb-2">
                     <div class="card gruppe-card mb-0">
-                        <div class="gruppe-header">Gruppe {{ gruppe_navn }}</div>
+                        <div class="gruppe-header d-flex justify-content-between align-items-center">
+                            <span>Gruppe {{ gruppe_navn }}</span>
+                            <button type="button" class="btn btn-sm btn-light" onclick="beregnGruppe('{{ gruppe_navn }}')" style="font-size: 0.75em; padding: 2px 6px;">
+                                🔄
+                            </button>
+                        </div>
                         <div class="card-body p-2">
                             {% for plass in range(1, 5) %}
                             <div class="lag-row d-flex align-items-center gap-2" style="padding: 6px 8px;">
@@ -275,6 +285,61 @@ function updateResultFasit(kampId) {
     } else {
         resultSelect.value = 'B';
     }
+}
+
+const fasitGruppeData = {
+    {% for gruppe_navn, lag_liste in grupper.items() %}
+    "{{ gruppe_navn }}": [
+        {% for lag, flagg_kode in lag_liste %}"{{ lag }}"{% if not loop.last %}, {% endif %}{% endfor %}
+    ]{% if not loop.last %},{% endif %}
+    {% endfor %}
+};
+
+const fasitKampData = [
+    {% for kamp in kamper %}
+    {% if kamp.fase == 'Gruppespill' %}
+    { id: {{ kamp.id }}, gruppe: "{{ kamp.gruppe }}",
+      hjemme: "{{ kamp.hjemmelag[0] if kamp.hjemmelag is not string else kamp.hjemmelag }}",
+      borte: "{{ kamp.bortelag[0] if kamp.bortelag is not string else kamp.bortelag }}" },
+    {% endif %}
+    {% endfor %}
+];
+
+function beregnGruppe(gruppeNavn) {
+    const teams = fasitGruppeData[gruppeNavn];
+    const standings = {};
+    teams.forEach(t => { standings[t] = { points: 0, goalsFor: 0, goalsAgainst: 0, gd: 0 }; });
+
+    fasitKampData.filter(k => k.gruppe === gruppeNavn).forEach(kamp => {
+        const hInput = document.getElementById('res_home_' + kamp.id);
+        const aInput = document.getElementById('res_away_' + kamp.id);
+        if (!hInput || !aInput || hInput.value === '' || aInput.value === '') return;
+        const hg = parseInt(hInput.value), ag = parseInt(aInput.value);
+        if (isNaN(hg) || isNaN(ag)) return;
+        standings[kamp.hjemme].goalsFor += hg; standings[kamp.hjemme].goalsAgainst += ag;
+        standings[kamp.borte].goalsFor += ag; standings[kamp.borte].goalsAgainst += hg;
+        standings[kamp.hjemme].gd = standings[kamp.hjemme].goalsFor - standings[kamp.hjemme].goalsAgainst;
+        standings[kamp.borte].gd = standings[kamp.borte].goalsFor - standings[kamp.borte].goalsAgainst;
+        if (hg > ag) { standings[kamp.hjemme].points += 3; }
+        else if (ag > hg) { standings[kamp.borte].points += 3; }
+        else { standings[kamp.hjemme].points += 1; standings[kamp.borte].points += 1; }
+    });
+
+    const sorted = teams.slice().sort((a, b) => {
+        if (standings[b].points !== standings[a].points) return standings[b].points - standings[a].points;
+        if (standings[b].gd !== standings[a].gd) return standings[b].gd - standings[a].gd;
+        return standings[b].goalsFor - standings[a].goalsFor;
+    });
+
+    sorted.forEach((team, idx) => {
+        const sel = document.querySelector(`select[name="fasit_${gruppeNavn}_plass_${idx + 1}"]`);
+        if (sel) sel.value = team;
+    });
+}
+
+function beregnAlleGrupper() {
+    Object.keys(fasitGruppeData).forEach(g => beregnGruppe(g));
+    alert('✅ Alle gruppeplasseringer er beregnet fra fasit!');
 }
 </script>
 
