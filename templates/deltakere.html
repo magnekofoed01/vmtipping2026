@@ -5,19 +5,9 @@
     <title>Deltakere - VM Tipping</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .participant-card {
-            transition: transform 0.2s;
-        }
-        .participant-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .tips-table {
-            font-size: 0.9em;
-        }
-        .badge-custom {
-            font-size: 0.85em;
-        }
+        .tips-table { font-size: 0.9em; }
+        .accordion-button:not(.collapsed) { background-color: #0d6efd; color: white; }
+        .accordion-button:not(.collapsed)::after { filter: invert(1); }
     </style>
 </head>
 <body class="bg-light">
@@ -38,140 +28,128 @@
 
 <div class="container">
     <h1 class="mb-4">👥 Deltakere</h1>
-    
     <div class="alert alert-info">
         <strong>📊 Totalt antall deltakere:</strong> {{ deltakere|length }}
     </div>
 
     {% if deltakere %}
-        <div class="row">
-            {% for deltaker in deltakere %}
-            <div class="col-md-6 mb-4">
-                <div class="card participant-card shadow-sm">
-                    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">{{ deltaker.navn }}</h5>
-                        <span class="badge bg-warning text-dark fs-6">🏆 {{ deltaker.totalt_poeng }} poeng</span>
+    <div class="accordion" id="deltakereAccordion">
+        {% for deltaker in deltakere %}
+        <div class="accordion-item mb-2 shadow-sm">
+            <h2 class="accordion-header">
+                <button class="accordion-button collapsed" type="button"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#deltaker_{{ loop.index }}"
+                        aria-expanded="false">
+                    <div class="d-flex justify-content-between align-items-center w-100 me-3">
+                        <span><strong>{{ deltaker.navn }}</strong>
+                            <small class="text-muted ms-2">{{ deltaker.epost }}</small>
+                        </span>
+                        <span class="badge bg-warning text-dark">🏆 {{ deltaker.totalt_poeng }} poeng</span>
                     </div>
-                    <div class="card-body">
-                        <p class="mb-2">
-                            <strong>📞 Telefon:</strong> {{ deltaker.telefon }}<br>
-                            <strong>📧 E-post:</strong> {{ deltaker.epost }}
-                        </p>
-                        
-                        <hr>
-                        
-                        <h6 class="mb-3">
-                            <span class="badge bg-success badge-custom">
-                                {{ deltaker.tips|length }} tips registrert
-                            </span>
-                        </h6>
-                        
-                        <div class="table-responsive">
-                            <table class="table table-sm table-striped tips-table">
-                                <thead class="table-dark">
-                                    <tr>
-                                        <th>Kamp</th>
-                                        <th>Tips</th>
-                                        <th>Resultat</th>
-                                        <th>Poeng</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for tip in deltaker.tips %}
-                                    <tr>
-                                        <td><small>{{ tip.hjemmelag }} - {{ tip.bortelag }}</small></td>
-                                        <td><strong>{{ tip.mål_hjemme }} - {{ tip.mål_borte }}</strong></td>
-                                        <td>
-                                            <span class="badge 
-                                                {% if tip.resultat == 'H' %}bg-info
-                                                {% elif tip.resultat == 'U' %}bg-warning
-                                                {% else %}bg-secondary{% endif %}">
-                                                {{ tip.resultat }}
-                                            </span>
-                                        </td>
-                                        <td>
-                                            {% if tip.har_fasit %}
-                                                <strong>{{ tip.poeng }}</strong>
-                                            {% else %}
-                                                <small class="text-muted">–</small>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-success">
-                                        <td colspan="3"><strong>Sum kamppoeng</strong></td>
-                                        <td><strong>{{ deltaker.tips | sum(attribute='poeng') }}</strong></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
+                </button>
+            </h2>
+            <div id="deltaker_{{ loop.index }}" class="accordion-collapse collapse"
+                 data-bs-parent="#deltakereAccordion">
+                <div class="accordion-body">
+                    <p class="mb-2">
+                        <strong>📞</strong> {{ deltaker.telefon }} &nbsp;
+                        <strong>📧</strong> {{ deltaker.epost }}
+                    </p>
 
-                        {% if deltaker.gruppe_tips %}
-                        <hr>
-                        <h6>🏅 Gruppeplasseringer <span class="badge bg-warning text-dark">{{ deltaker.gruppe_poeng }} poeng</span></h6>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-striped tips-table">
-                                <thead class="table-dark">
-                                    <tr><th>Gr.</th><th>Lag</th><th>Tippet</th><th>Fasit</th><th>Poeng</th></tr>
-                                </thead>
-                                <tbody>
-                                    {% for gt in deltaker.gruppe_tips | sort(attribute='gruppe') %}
-                                    <tr>
-                                        <td>{{ gt.gruppe }}</td>
-                                        <td>{{ gt.lag }}</td>
-                                        <td>{{ gt.plassering }}.</td>
-                                        <td>{% if gt.fasit_plassering %}{{ gt.fasit_plassering }}.{% else %}<small class="text-muted">–</small>{% endif %}</td>
-                                        <td>{% if gt.poeng > 0 %}<strong class="text-success">{{ gt.poeng }}</strong>{% else %}<small class="text-muted">–</small>{% endif %}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                                <tfoot>
-                                    <tr class="table-success">
-                                        <td colspan="4"><strong>Sum gruppepoeng</strong></td>
-                                        <td><strong>{{ deltaker.gruppe_poeng }}</strong></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
-                        </div>
-                        {% endif %}
-
-                        {% if deltaker.sluttspilltips %}
-                        <hr>
-                        <h6>🏆 Sluttspilltips <span class="badge bg-warning text-dark">{{ deltaker.sluttspill_poeng }} poeng</span></h6>
-                        {% set fase_rekkefølge = ['8-delsfinale', 'Kvartfinale', 'Semifinale', 'Finale', 'Vinner'] %}
-                        {% set fase_poeng_info = {'8-delsfinale': '5p/lag', 'Kvartfinale': '7p/lag', 'Semifinale': '10p/lag', 'Finale': '15p/lag', 'Vinner': '30p'} %}
-                        {% for fase in fase_rekkefølge %}
-                            {% if fase in deltaker.sluttspilltips %}
-                            <div class="mb-2">
-                                <strong>{{ fase }}</strong>
-                                <small class="text-muted ms-1">({{ fase_poeng_info[fase] }})</small>
-                                {% set fase_sum = deltaker.sluttspilltips[fase] | sum(attribute='poeng') %}
-                                {% if fase_sum > 0 %}
-                                <span class="badge bg-success ms-1">+{{ fase_sum }}p</span>
-                                {% endif %}
-                                <br>
-                                {% for item in deltaker.sluttspilltips[fase] %}
-                                <span class="badge {% if item.poeng > 0 %}bg-success{% else %}bg-light text-dark border{% endif %} me-1">
-                                    {{ item.lag }}{% if item.poeng > 0 %} ✓{% endif %}
-                                </span>
+                    <!-- Kamptips -->
+                    <h6 class="mt-3">⚽ Kamptips <span class="badge bg-success">{{ deltaker.tips | sum(attribute='poeng') }}p</span></h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped tips-table">
+                            <thead class="table-dark">
+                                <tr><th>Kamp</th><th>Tips</th><th>HUB</th><th>Poeng</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for tip in deltaker.tips %}
+                                <tr>
+                                    <td><small>{{ tip.hjemmelag }} - {{ tip.bortelag }}</small></td>
+                                    <td><strong>{{ tip.mål_hjemme }} - {{ tip.mål_borte }}</strong></td>
+                                    <td>
+                                        <span class="badge {% if tip.resultat == 'H' %}bg-info{% elif tip.resultat == 'U' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                            {{ tip.resultat }}
+                                        </span>
+                                    </td>
+                                    <td>{% if tip.har_fasit %}<strong>{{ tip.poeng }}</strong>{% else %}<small class="text-muted">–</small>{% endif %}</td>
+                                </tr>
                                 {% endfor %}
-                            </div>
-                            {% endif %}
-                        {% endfor %}
-                        {% endif %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-success">
+                                    <td colspan="3"><strong>Sum kamppoeng</strong></td>
+                                    <td><strong>{{ deltaker.tips | sum(attribute='poeng') }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
+
+                    <!-- Gruppeplasseringer -->
+                    {% if deltaker.gruppe_tips %}
+                    <h6 class="mt-3">🏅 Gruppeplasseringer <span class="badge bg-warning text-dark">{{ deltaker.gruppe_poeng }}p</span></h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped tips-table">
+                            <thead class="table-dark">
+                                <tr><th>Gr.</th><th>Lag</th><th>Tippet</th><th>Fasit</th><th>Poeng</th></tr>
+                            </thead>
+                            <tbody>
+                                {% for gt in deltaker.gruppe_tips | sort(attribute='gruppe') %}
+                                <tr>
+                                    <td>{{ gt.gruppe }}</td>
+                                    <td>{{ gt.lag }}</td>
+                                    <td>{{ gt.plassering }}.</td>
+                                    <td>{% if gt.fasit_plassering %}{{ gt.fasit_plassering }}.{% else %}<small class="text-muted">–</small>{% endif %}</td>
+                                    <td>{% if gt.poeng > 0 %}<strong class="text-success">{{ gt.poeng }}</strong>{% else %}<small class="text-muted">–</small>{% endif %}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                            <tfoot>
+                                <tr class="table-success">
+                                    <td colspan="4"><strong>Sum gruppepoeng</strong></td>
+                                    <td><strong>{{ deltaker.gruppe_poeng }}</strong></td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    {% endif %}
+
+                    <!-- Sluttspilltips -->
+                    {% if deltaker.sluttspilltips %}
+                    <h6 class="mt-3">🏆 Sluttspilltips <span class="badge bg-warning text-dark">{{ deltaker.sluttspill_poeng }}p</span></h6>
+                    {% set fase_rekkefølge = ['8-delsfinale', 'Kvartfinale', 'Semifinale', 'Finale', 'Vinner'] %}
+                    {% set fase_poeng_info = {'8-delsfinale': '5p/lag', 'Kvartfinale': '7p/lag', 'Semifinale': '10p/lag', 'Finale': '15p/lag', 'Vinner': '30p'} %}
+                    {% for fase in fase_rekkefølge %}
+                        {% if fase in deltaker.sluttspilltips %}
+                        <div class="mb-2">
+                            <strong>{{ fase }}</strong>
+                            <small class="text-muted ms-1">({{ fase_poeng_info[fase] }})</small>
+                            {% set fase_sum = deltaker.sluttspilltips[fase] | sum(attribute='poeng') %}
+                            {% if fase_sum > 0 %}<span class="badge bg-success ms-1">+{{ fase_sum }}p</span>{% endif %}
+                            <br>
+                            {% for item in deltaker.sluttspilltips[fase] %}
+                            <span class="badge {% if item.poeng > 0 %}bg-success{% else %}bg-light text-dark border{% endif %} me-1">
+                                {{ item.lag }}{% if item.poeng > 0 %} ✓{% endif %}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    {% endif %}
+
                 </div>
             </div>
-            {% endfor %}
         </div>
+        {% endfor %}
+    </div>
+
     {% else %}
-        <div class="alert alert-warning">
-            <h4>⚠️ Ingen deltakere ennå</h4>
-            <p>Ingen har lagt inn tips ennå. Vær den første!</p>
-            <a href="/" class="btn btn-primary">Legg inn dine tips</a>
-        </div>
+    <div class="alert alert-warning">
+        <h4>⚠️ Ingen deltakere ennå</h4>
+        <a href="/" class="btn btn-primary">Legg inn dine tips</a>
+    </div>
     {% endif %}
 
     <div class="mt-4">
@@ -184,5 +162,6 @@
     <p class="mb-0">VM Tipping 2026 ⚽</p>
 </footer>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

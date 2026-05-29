@@ -283,7 +283,7 @@
         </div>
 
         <div class="text-center mt-4">
-            <button type="submit" class="btn btn-primary btn-lg">Send inn alle tips</button>
+            <button type="button" class="btn btn-primary btn-lg" onclick="bekreftInnsending()">Send inn alle tips</button>
         </div>
     </form>
 </div>
@@ -485,6 +485,17 @@ function foreslaFase(fase, fraFase, antall) {
     const shuffled = [...new Set(kandidater)].sort(() => Math.random() - 0.5).slice(0, antall);
     document.querySelectorAll(`select[name^="sluttspill_${fase}_"]`).forEach((sel, idx) => { sel.value = idx < shuffled.length ? shuffled[idx] : ''; });
     showToast(`✅ Foreslått ${shuffled.length} lag til ${fase}!`);
+}
+
+function bekreftInnsending() {
+    const navn = document.querySelector('input[name="navn"]').value.trim();
+    const melding = `⚠️ Er du sikker på at du vil sende inn tipsene dine?\n\n` +
+        `Navn: ${navn || '(ikke fylt inn)'}\n\n` +
+        `⛔ OBS: Det er ikke mulig å endre eller slette tipsene dine etter innsending!\n\n` +
+        `Trykk OK for å bekrefte, eller Avbryt for å gå tilbake og sjekke tipsene dine.`;
+    if (confirm(melding)) {
+        document.querySelector('form').submit();
+    }
 }
 
 document.addEventListener('DOMContentLoaded', function() {

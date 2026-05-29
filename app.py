@@ -13,7 +13,8 @@ app.secret_key = os.environ.get('SECRET_KEY', 'fallback_nokkel_bytt_meg')
 ADMIN_PASSORD_HASH = os.environ.get('ADMIN_PASSORD_HASH', '')
 SMTP_PASSORD = os.environ.get('SMTP_PASSORD', '')
 SMTP_AVSENDER = os.environ.get('SMTP_AVSENDER', '')
-DB_FILE = 'tips.db'
+# Bruk persistent disk på Render, lokal fil i dev
+DB_FILE = os.environ.get('DB_PATH', 'tips.db')
 
 def krever_innlogging(f):
     @wraps(f)
