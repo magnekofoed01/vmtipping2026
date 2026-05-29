@@ -61,46 +61,50 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-2 text-center">
-                        <div class="trophy-icon">🏆</div>
-                    </div>
-                    <div class="col-md-10">
-                        <h5 class="text-success mb-3">
-                            {% if dag.vinnere|length == 1 %}
-                                Dagens vinner
-                            {% else %}
-                                Dagens vinnere (delt førsteplass)
-                            {% endif %}
-                        </h5>
-                        
-                        {% for vinner in dag.vinnere %}
-                        <div class="alert alert-success mb-2">
-                            <div class="row align-items-center">
-                                <div class="col-md-6">
-                                    <h5 class="mb-0">
-                                        <strong>{{ vinner[0] }}</strong>
-                                    </h5>
-                                    <small class="text-muted">
-                                        📞 {{ vinner[1] }} | 📧 {{ vinner[2] }}
-                                    </small>
-                                </div>
-                                <div class="col-md-6 text-end">
-                                    <span class="badge bg-success" style="font-size: 1.5em;">
-                                        {{ vinner[3] }} poeng
-                                    </span>
-                                </div>
-                            </div>
+                {% set kun_en_vinner = dag.vinnere|length == 1 %}
+
+                {% if kun_en_vinner %}
+                <div class="alert alert-warning border-warning mb-3" style="border-width:3px!important;">
+                    <div class="row align-items-center">
+                        <div class="col-auto">
+                            <span style="font-size:2.5em;">🏆</span>
                         </div>
-                        {% endfor %}
-                        
-                        <div class="mt-3 text-muted">
-                            <small>
-                                <strong>Maks mulig poeng denne dagen:</strong> {{ dag.antall_kamper * 3 }} poeng
-                            </small>
+                        <div class="col">
+                            <h4 class="mb-0 fw-bold">{{ dag.vinnere[0][0] }}</h4>
+                            <small class="text-muted">📞 {{ dag.vinnere[0][1] }} | 📧 {{ dag.vinnere[0][2] }}</small>
+                        </div>
+                        <div class="col-auto">
+                            <span class="badge bg-warning text-dark" style="font-size:1.4em;">
+                                🥇 {{ dag.vinnere[0][3] }} poeng
+                            </span>
                         </div>
                     </div>
                 </div>
+                {% else %}
+                <div class="alert alert-info mb-3">
+                    <strong>🤝 Delt førsteplass:</strong>
+                    {% for v in dag.vinnere %}
+                    <span class="badge bg-success ms-1">{{ v[0] }} – {{ v[3] }}p</span>
+                    {% endfor %}
+                    <small class="d-block mt-1 text-muted">Ingen dagspremie ved delt førsteplass – potten overføres til neste dag.</small>
+                </div>
+                {% endif %}
+
+                <h6 class="mt-3">📊 Topp 10 denne dagen:</h6>
+                <table class="table table-sm table-striped">
+                    <thead class="table-dark">
+                        <tr><th>#</th><th>Navn</th><th>Poeng</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for (navn, tlf, epost), poeng in dag.topp10 %}
+                        <tr {% if kun_en_vinner and navn == dag.vinnere[0][0] %}class="table-warning fw-bold"{% endif %}>
+                            <td>{{ loop.index }}</td>
+                            <td>{{ navn }}{% if kun_en_vinner and loop.index == 1 %} 🏆{% endif %}</td>
+                            <td>{{ poeng }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
         {% endfor %}

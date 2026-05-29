@@ -444,8 +444,11 @@ def dagsvinner():
                 bruker_poeng[key] += beregn_poeng(mål_hjemme, mål_borte, resultat, dagens_kamper[kid])
         if bruker_poeng:
             max_poeng = max(bruker_poeng.values())
+            sortert = sorted(bruker_poeng.items(), key=lambda x: x[1], reverse=True)
+            topp10 = sortert[:10]
             vinnere = [(n, t, e, p) for (n, t, e), p in bruker_poeng.items() if p == max_poeng]
-            dagsvinnere.append({'dato': dato, 'antall_kamper': len(dagens_kamper), 'vinnere': vinnere, 'max_poeng': max_poeng})
+            dagsvinnere.append({'dato': dato, 'antall_kamper': len(dagens_kamper),
+                                'vinnere': vinnere, 'max_poeng': max_poeng, 'topp10': topp10})
     conn.close()
     return render_template('dagsvinner.html', dagsvinnere=dagsvinnere)
 
