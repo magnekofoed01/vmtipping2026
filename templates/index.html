@@ -489,8 +489,35 @@ function foreslaFase(fase, fraFase, antall) {
 
 function bekreftInnsending() {
     const navn = document.querySelector('input[name="navn"]').value.trim();
+    const telefon = document.querySelector('input[name="telefon"]').value.trim();
+    const epost = document.querySelector('input[name="epost"]').value.trim();
+
+    if (!navn) {
+        alert('⚠️ Du må fylle inn navn før du kan sende inn tips!');
+        document.querySelector('input[name="navn"]').focus();
+        return;
+    }
+    if (!telefon) {
+        alert('⚠️ Du må fylle inn telefonnummer før du kan sende inn tips!');
+        document.querySelector('input[name="telefon"]').focus();
+        return;
+    }
+    if (!epost) {
+        alert('⚠️ Du må fylle inn e-post før du kan sende inn tips!');
+        document.querySelector('input[name="epost"]').focus();
+        return;
+    }
+    // Enkel e-post validering
+    const epostRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!epostRegex.test(epost)) {
+        alert('⚠️ E-postadressen ser ikke riktig ut. Sjekk og prøv igjen.');
+        document.querySelector('input[name="epost"]').focus();
+        return;
+    }
+
     const melding = `⚠️ Er du sikker på at du vil sende inn tipsene dine?\n\n` +
-        `Navn: ${navn || '(ikke fylt inn)'}\n\n` +
+        `Navn: ${navn}\n` +
+        `E-post: ${epost}\n\n` +
         `⛔ OBS: Det er ikke mulig å endre eller slette tipsene dine etter innsending!\n\n` +
         `Trykk OK for å bekrefte, eller Avbryt for å gå tilbake og sjekke tipsene dine.`;
     if (confirm(melding)) {
