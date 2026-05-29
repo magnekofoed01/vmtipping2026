@@ -75,17 +75,33 @@
 <div class="container">
     <h1 class="mb-4">Legg inn dine tips</h1>
     <form method="POST" class="card p-4 shadow-sm">
-        <div class="mb-3">
-            <label class="form-label">Navn</label>
-            <input type="text" name="navn" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">Telefon</label>
-            <input type="text" name="telefon" class="form-control" required>
-        </div>
-        <div class="mb-3">
-            <label class="form-label">E-post</label>
-            <input type="email" name="epost" class="form-control" required>
+        <div class="row">
+            <div class="col-md-5">
+                <div class="mb-2">
+                    <label class="form-label mb-0">Navn</label>
+                    <input type="text" name="navn" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label mb-0">Telefon</label>
+                    <input type="text" name="telefon" class="form-control form-control-sm" required>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label mb-0">E-post</label>
+                    <input type="email" name="epost" class="form-control form-control-sm" required>
+                </div>
+            </div>
+            <div class="col-md-7">
+                <div class="alert alert-warning py-2 h-100 mb-0">
+                    <h6 class="fw-bold">⚽ Viktig informasjon</h6>
+                    <p class="mb-1 small">Konkurransen er åpen for alle, men bare <strong>ett tips per person</strong>. Hvert tips koster <strong>100,-</strong> og alt går ut igjen til premier. Fordelingen bestemmes av antall deltakere.</p>
+                    <p class="mb-1 small">Betales til <strong>Bjarte Skår</strong> direkte:</p>
+                    <ul class="mb-0 small">
+                        <li>📱 <strong>VIPPS:</strong> 90884651 <em>(husk å merke tydelig hvem betalingen gjelder for)</em></li>
+                        <li>🏦 <strong>Konto:</strong> 9001.19.55265</li>
+                    </ul>
+                    <p class="mb-0 mt-1 small text-danger fw-bold">⏰ Frist: Torsdag 11. juni kl. 21:00 (før første kamp)</p>
+                </div>
+            </div>
         </div>
         
         <div class="row">
