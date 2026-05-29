@@ -386,6 +386,7 @@ def deltakere():
                                'sluttspill_poeng': sluttspill_poeng,
                                'totalt_poeng': totalt_poeng})
     conn.close()
+    deltaker_liste.sort(key=lambda d: d['navn'].lower())
     return render_template('deltakere.html', deltakere=deltaker_liste)
 
 
