@@ -62,16 +62,30 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
-            <a class="btn btn-outline-light me-2" href="/">Legg inn tips</a>
+            {% if tipping_stengt %}
+            <span class="btn btn-outline-secondary me-2 disabled" style="opacity:0.5; cursor:not-allowed;" title="Tippingen er stengt">
+                ⛔ Tipping stengt
+            </span>
+            {% else %}
+            <a class="btn btn-outline-light me-2" href="/tips">Legg inn tips</a>
+            {% endif %}
+            <a class="btn btn-outline-light me-2" href="/poeng">Poengoversikt</a>
             <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
             <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
             <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
             <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
             <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
-            <a class="btn btn-outline-light" href="/poeng">Poengoversikt</a>
         </div>
     </div>
 </nav>
+
+{% if tipping_stengt %}
+<div class="container">
+    <div class="alert alert-danger text-center fs-5">
+        ⛔ <strong>Tippingen er stengt!</strong> Fristen var torsdag 11. juni kl. 21:00.
+    </div>
+</div>
+{% else %}
 <div class="container">
     <h1 class="mb-4">Legg inn dine tips</h1>
     <form method="POST" class="card p-4 shadow-sm">
@@ -303,6 +317,7 @@
         </div>
     </form>
 </div>
+{% endif %}
 
 <script>
 console.log('✅ JavaScript loaded - version 3.3');

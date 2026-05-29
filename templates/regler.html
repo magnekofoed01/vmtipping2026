@@ -30,12 +30,17 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
-            <a class="btn btn-outline-light me-2" href="/">Legg inn tips</a>
+            {% if tipping_stengt %}
+            <span class="btn btn-outline-secondary me-2 disabled" style="opacity:0.5; cursor:not-allowed;">⛔ Tipping stengt</span>
+            {% else %}
+            <a class="btn btn-outline-light me-2" href="/tips">Legg inn tips</a>
+            {% endif %}
+            <a class="btn btn-outline-light me-2" href="/poeng">Poengoversikt</a>
             <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
             <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
             <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
             <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
-            <a class="btn btn-outline-light" href="/poeng">Poengoversikt</a>
         </div>
     </div>
 </nav>

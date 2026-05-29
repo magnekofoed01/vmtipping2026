@@ -90,13 +90,17 @@
     <div class="container-fluid">
         <a class="navbar-brand" href="/">⚽ VM Tipping 2026</a>
         <div class="d-flex flex-wrap gap-1">
-            <a class="btn btn-outline-light btn-sm" href="/">Legg inn tips</a>
+            {% if tipping_stengt %}
+            <span class="btn btn-outline-secondary btn-sm disabled" style="opacity:0.5; cursor:not-allowed;">⛔ Tipping stengt</span>
+            {% else %}
+            <a class="btn btn-outline-light btn-sm" href="/tips">Legg inn tips</a>
+            {% endif %}
+            <a class="btn btn-outline-light btn-sm" href="/poeng">Poengoversikt</a>
             <a class="btn btn-outline-light btn-sm" href="/deltakere">Deltakere</a>
             <a class="btn btn-outline-light btn-sm" href="/fasit">Vis fasit</a>
             <a class="btn btn-outline-light btn-sm" href="/dagsvinner">Dagsvinner</a>
             <a class="btn btn-outline-light btn-sm" href="/regler">Regler</a>
             <a class="btn btn-outline-light btn-sm" href="/resultater">Legg inn fasit</a>
-            <a class="btn btn-outline-light btn-sm" href="/poeng">Poengoversikt</a>
             <a class="btn btn-logout btn-sm" href="/logout">🔓 Logg ut</a>
         </div>
     </div>
@@ -118,7 +122,7 @@
 
     <!-- Statistikk -->
     <div class="row mb-4">
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <div class="card stat-card">
                 <div class="card-body text-center py-4">
                     <h2 class="text-success">{{ totalt_tips }}</h2>
@@ -126,11 +130,21 @@
                 </div>
             </div>
         </div>
-        <div class="col-md-6 mb-3">
+        <div class="col-md-4 mb-3">
             <div class="card stat-card">
                 <div class="card-body text-center py-4">
                     <h2 class="text-success">{{ totalt_resultater }}</h2>
                     <p class="mb-0 fw-bold">🏆 Registrerte resultater</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card">
+                <div class="card-body text-center py-4">
+                    <a href="/backup-db" class="btn btn-success btn-lg">
+                        💾 Last ned backup
+                    </a>
+                    <p class="mb-0 mt-2 text-muted small">tips_backup.db</p>
                 </div>
             </div>
         </div>

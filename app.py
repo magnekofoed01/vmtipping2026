@@ -1,10 +1,12 @@
-from flask import Flask, render_template, request, redirect, session, url_for
+from flask import Flask, render_template, request, redirect, session, url_for, send_file
 from functools import wraps
 from werkzeug.security import check_password_hash
 from dotenv import load_dotenv
 import sqlite3, smtplib, os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from datetime import datetime
+import shutil
 
 load_dotenv()
 
@@ -13,8 +15,13 @@ app.secret_key = os.environ.get('SECRET_KEY', 'fallback_nokkel_bytt_meg')
 ADMIN_PASSORD_HASH = os.environ.get('ADMIN_PASSORD_HASH', '')
 SMTP_PASSORD = os.environ.get('SMTP_PASSORD', '')
 SMTP_AVSENDER = os.environ.get('SMTP_AVSENDER', '')
-# Bruk persistent disk på Render, lokal fil i dev
 DB_FILE = os.environ.get('DB_PATH', 'tips.db')
+
+stengt_tidspunkt = datetime(2026, 6, 11, 21, 5, 0)  # Riktig dato
+
+@app.context_processor
+def inject_tipping_stengt():
+    return {'tipping_stengt': datetime.now() >= stengt_tidspunkt}
 
 def krever_innlogging(f):
     @wraps(f)
@@ -238,17 +245,11 @@ for i in range(1, 3):
     kamp_id += 1
 
 kamper.append({
-    "id": kamp_id, "fase": "Bronsefinale", "gruppe": None,
-    "hjemmelag": "bronse_hjemme", "bortelag": "bronse_borte",
-    "kamp_nr": 1, "dato": sluttspill_datoer["Bronsefinale"][0]
-})
-kamp_id += 1
-
-kamper.append({
     "id": kamp_id, "fase": "Finale", "gruppe": None,
     "hjemmelag": "finale_hjemme", "bortelag": "finale_borte",
     "kamp_nr": 1, "dato": sluttspill_datoer["Finale"][0]
 })
+kamp_id += 1
 
 kamper_gruppespill = sorted([k for k in kamper if k['fase'] == 'Gruppespill'], key=lambda k: k.get('dato') or '9999')
 kamper_andre = [k for k in kamper if k['fase'] != 'Gruppespill']
@@ -270,9 +271,21 @@ def beregn_poeng(mål_hjemme, mål_borte, resultat, res):
     return poeng
 
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/')
+def root():
+    tipping_stengt = datetime.now() >= stengt_tidspunkt
+    if tipping_stengt:
+        return redirect('/poeng')
+    return redirect('/tips')
+
+@app.route('/tips', methods=['GET', 'POST'])
 def index():
+    tipping_stengt = datetime.now() >= stengt_tidspunkt
+    if tipping_stengt:
+        return redirect('/poeng')
     if request.method == 'POST':
+        if tipping_stengt:
+            return redirect('/')
         navn = request.form['navn']
         telefon = request.form['telefon']
         epost = request.form['epost']
@@ -288,7 +301,6 @@ def index():
                 bortelag = kamp['bortelag'][0] if isinstance(kamp['bortelag'], tuple) else kamp['bortelag']
                 c.execute('INSERT INTO tips (navn, telefon, epost, kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
                           (navn, telefon, epost, kamp['id'], hjemmelag, bortelag, mål_hjemme, mål_borte, resultat))
-        # Gruppetips - leser gruppe_NAVN_plass_PLASS fra index.html
         for gruppe_navn in grupper:
             for plass in range(1, 5):
                 lag = request.form.get(f"gruppe_{gruppe_navn}_plass_{plass}")
@@ -304,9 +316,11 @@ def index():
                               (navn, telefon, epost, fase, lag))
         conn.commit()
         conn.close()
+        auto_backup()  # Ta backup etter lagring
         return redirect('/')
     return render_template('index.html', kamper=kamper, grupper=grupper,
-                           sluttspill_alternativer=sluttspill_alternativer, forslag_8del=[])
+                           sluttspill_alternativer=sluttspill_alternativer,
+                           forslag_8del=[], tipping_stengt=tipping_stengt)
 
 
 @app.route('/regler')
@@ -320,24 +334,19 @@ def deltakere():
     c = conn.cursor()
     c.execute('SELECT DISTINCT navn, telefon, epost FROM tips')
     unike_deltakere = c.fetchall()
-
     c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat FROM resultater')
     resultater_data = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3]} for row in c.fetchall()}
-
     c.execute('SELECT fase, lag FROM sluttspillfasit')
     sluttspill_fasit = {}
     for fase, lag in c.fetchall():
         if fase not in sluttspill_fasit: sluttspill_fasit[fase] = set()
         sluttspill_fasit[fase].add(lag)
-
     c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
     gruppefasit = {}
     for gruppe, lag, plassering in c.fetchall():
         if gruppe not in gruppefasit: gruppefasit[gruppe] = {}
         gruppefasit[gruppe][lag] = plassering
-
     fase_poeng_tabell = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
-
     deltaker_liste = []
     for navn, telefon, epost in unike_deltakere:
         c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat FROM tips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
@@ -350,8 +359,6 @@ def deltakere():
             tips_formatert.append({'kamp_id': kid, 'hjemmelag': hjemmelag, 'bortelag': bortelag,
                                    'mål_hjemme': mh, 'mål_borte': mb, 'resultat': res, 'poeng': poeng,
                                    'har_fasit': kid in resultater_data})
-
-        # Gruppepoeng
         c.execute('SELECT gruppe, lag, plassering FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
         gruppe_tips_liste = []
         gruppe_poeng_total = 0
@@ -365,7 +372,6 @@ def deltakere():
                     gruppe_poeng_total += 2
             gruppe_tips_liste.append({'gruppe': gruppe, 'lag': lag, 'plassering': plassering,
                                       'fasit_plassering': fasit_plassering, 'poeng': poeng})
-
         c.execute('SELECT fase, lag FROM sluttspilltips WHERE navn=? AND telefon=? AND epost=? ORDER BY fase', (navn, telefon, epost))
         sluttspill = {}
         sluttspill_poeng = 0
@@ -376,15 +382,11 @@ def deltakere():
                 lag_poeng = fase_poeng_tabell.get(fase, 5)
                 sluttspill_poeng += lag_poeng
             sluttspill[fase].append({'lag': lag, 'poeng': lag_poeng})
-
         totalt_poeng = sum(t['poeng'] for t in tips_formatert) + gruppe_poeng_total + sluttspill_poeng
         deltaker_liste.append({'navn': navn, 'telefon': telefon, 'epost': epost,
-                               'tips': tips_formatert,
-                               'gruppe_tips': gruppe_tips_liste,
-                               'gruppe_poeng': gruppe_poeng_total,
-                               'sluttspilltips': sluttspill,
-                               'sluttspill_poeng': sluttspill_poeng,
-                               'totalt_poeng': totalt_poeng})
+                               'tips': tips_formatert, 'gruppe_tips': gruppe_tips_liste,
+                               'gruppe_poeng': gruppe_poeng_total, 'sluttspilltips': sluttspill,
+                               'sluttspill_poeng': sluttspill_poeng, 'totalt_poeng': totalt_poeng})
     conn.close()
     deltaker_liste.sort(key=lambda d: d['navn'].lower())
     return render_template('deltakere.html', deltakere=deltaker_liste)
@@ -477,6 +479,23 @@ def administrer():
         elif action == 'slett_alle_resultater':
             c.execute('DELETE FROM resultater'); c.execute('DELETE FROM gruppefasit'); c.execute('DELETE FROM sluttspillfasit')
             conn.commit(); melding = "✅ Alle resultater er slettet!"
+        elif action == 'legg_inn_gruppetips':
+            gt_deltaker = request.form.get('gt_deltaker', '')
+            if '|' in gt_deltaker:
+                navn, telefon, epost = gt_deltaker.split('|', 2)
+                c.execute('DELETE FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
+                antall = 0
+                for gruppe_navn in grupper:
+                    for plass in range(1, 5):
+                        lag = request.form.get(f"gt_{gruppe_navn}_plass_{plass}")
+                        if lag:
+                            c.execute('INSERT INTO gruppetips (navn, telefon, epost, gruppe, lag, plassering) VALUES (?, ?, ?, ?, ?, ?)',
+                                      (navn, telefon, epost, gruppe_navn, lag, plass))
+                            antall += 1
+                conn.commit()
+                melding = f"✅ Lagret {antall} gruppetips for {navn}!"
+            else:
+                melding = "❌ Ingen deltaker valgt."
     c.execute('''SELECT navn, telefon, epost FROM tips
         UNION SELECT navn, telefon, epost FROM gruppetips
         UNION SELECT navn, telefon, epost FROM sluttspilltips ORDER BY navn''')
@@ -492,7 +511,7 @@ def administrer():
     totalt_resultater = c.fetchone()[0]
     conn.close()
     return render_template('administrer.html', deltakere=deltakere_med_antall, totalt_tips=totalt_tips,
-                           totalt_resultater=totalt_resultater, melding=melding)
+                           totalt_resultater=totalt_resultater, melding=melding, grupper_info=grupper)
 
 
 @app.route('/resultater', methods=['GET', 'POST'])
@@ -527,7 +546,7 @@ def resultater():
                         c.execute('INSERT OR IGNORE INTO sluttspillfasit (fase, lag) VALUES (?, ?)', (fase, lag))
         for gruppe_navn in grupper:
             for plass in range(1, 5):
-                lag = request.form.get(f"gruppe_{gruppe_navn}_plass_{plass}")  # ikke fasit_
+                lag = request.form.get(f"fasit_{gruppe_navn}_plass_{plass}")
                 if lag:
                     c.execute('REPLACE INTO gruppefasit (gruppe, lag, plassering) VALUES (?, ?, ?)', (gruppe_navn, lag, plass))
         conn.commit()
@@ -584,13 +603,13 @@ def poeng():
     for fase, lag in c.fetchall():
         if fase not in sluttspill_fasit: sluttspill_fasit[fase] = set()
         sluttspill_fasit[fase].add(lag)
-    fase_poeng_tabell = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
+    fase_poeng = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
     c.execute('SELECT navn, telefon, epost, fase, lag FROM sluttspilltips')
     for navn, telefon, epost, fase, lag in c.fetchall():
         key = (navn, telefon, epost)
         if key not in bruker_poeng: bruker_poeng[key] = 0
         if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
-            bruker_poeng[key] += fase_poeng_tabell.get(fase, 5)
+            bruker_poeng[key] += fase_poeng.get(fase, 5)
     conn.close()
     rangering = sorted(bruker_poeng.items(), key=lambda x: x[1], reverse=True)
     melding = None
@@ -658,7 +677,31 @@ def login():
 @app.route('/logout')
 def logout():
     session.pop('admin_innlogget', None)
-    return redirect(url_for('index'))
+    return redirect(url_for('root'))
+
+
+@app.route('/backup-db')
+@krever_innlogging
+def backup_db():
+    backup_path = DB_FILE.replace('.db', '_backup.db')
+    shutil.copy2(DB_FILE, backup_path)
+    return send_file(DB_FILE, as_attachment=True, download_name='tips_backup.db')
+
+
+def auto_backup():
+    try:
+        backup_dir = os.path.join(os.path.dirname(DB_FILE), 'backups')
+        os.makedirs(backup_dir, exist_ok=True)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_path = os.path.join(backup_dir, f'tips_backup_{timestamp}.db')
+        shutil.copy2(DB_FILE, backup_path)
+        # Behold kun de 10 siste backupene
+        backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
+        while len(backups) > 10:
+            os.remove(os.path.join(backup_dir, backups.pop(0)))
+        print(f"✅ Backup lagret: {backup_path}")
+    except Exception as e:
+        print(f"⚠️ Backup feilet: {e}")
 
 
 if __name__ == '__main__':
