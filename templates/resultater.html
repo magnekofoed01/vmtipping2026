@@ -35,16 +35,17 @@
         <a class="navbar-brand" href="/">VM Tipping</a>
         <div>
             {% if tipping_stengt %}
-            <span class="nav-link text-secondary d-inline disabled" style="opacity:0.5;">⛔ Tipping stengt</span>
+            <span class="btn btn-outline-secondary me-2 disabled" style="opacity:0.5; cursor:not-allowed;">⛔ Tipping stengt</span>
             {% else %}
-            <a class="nav-link text-white d-inline" href="/tips">Legg inn tips</a>
+            <a class="btn btn-outline-light me-2" href="/tips">Legg inn tips</a>
             {% endif %}
-            <a class="nav-link text-white d-inline" href="/poeng">Poengoversikt</a>
-            <a class="nav-link text-white d-inline" href="/deltakere">Deltakere</a>
-            <a class="nav-link text-white d-inline" href="/fasit">Vis fasit</a>
-            <a class="nav-link text-white d-inline" href="/dagsvinner">Dagsvinner</a>
-            <a class="nav-link text-white d-inline" href="/regler">Regler</a>
-            <a class="nav-link text-warning d-inline" href="/administrer">⚙️ Admin</a>
+            <a class="btn btn-outline-light me-2" href="/poeng">Poengoversikt</a>
+            <a class="btn btn-outline-light me-2" href="/deltakere">Deltakere</a>
+            <a class="btn btn-outline-light me-2" href="/fasit">Vis fasit</a>
+            <a class="btn btn-outline-light me-2" href="/dagsvinner">Dagsvinner</a>
+            <a class="btn btn-outline-light me-2" href="/regler">Regler</a>
+            <a class="btn btn-outline-light me-2" href="/resultater">Legg inn fasit</a>
+            <a class="btn btn-outline-warning me-2" href="/administrer">⚙️ Admin</a>
         </div>
     </div>
 </nav>
