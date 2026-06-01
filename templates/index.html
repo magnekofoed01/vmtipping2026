@@ -266,7 +266,7 @@
             </div>
 
             {% set fase_info = [
-                ('8-delsfinale', 16, '4.–7. jul', '5p/lag'),
+                ('8-delsfinale', 32, '4.–7. jul', '5p/lag'),
                 ('Kvartfinale', 8, '9.–12. jul', '7p/lag'),
                 ('Semifinale', 4, '14.–15. jul', '10p/lag'),
                 ('Finale', 2, '19. jul', '15p/lag'),
@@ -579,7 +579,7 @@ function bekreftInnsending() {
 
     // Sjekk sluttspilltips
     let manglendeSluttspill = [];
-    [['8-delsfinale',16],['Kvartfinale',8],['Semifinale',4],['Finale',2],['Vinner',1]].forEach(([fase, antall]) => {
+    [['8-delsfinale',32],['Kvartfinale',8],['Semifinale',4],['Finale',2],['Vinner',1]].forEach(([fase, antall]) => {
         let fylt = 0;
         for (let i = 0; i < antall; i++) {
             const sel = document.querySelector(`select[name="sluttspill_${fase}_${i}"]`);
