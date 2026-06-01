@@ -15,7 +15,7 @@ app.secret_key = os.environ.get('SECRET_KEY', 'fallback_nokkel_bytt_meg')
 ADMIN_PASSORD_HASH = os.environ.get('ADMIN_PASSORD_HASH', '')
 SMTP_PASSORD = os.environ.get('SMTP_PASSORD', '')
 SMTP_AVSENDER = os.environ.get('SMTP_AVSENDER', '')
-DB_FILE = os.environ.get('DB_PATH', 'tips.db')
+DB_PATH = '/data/tips.db' if os.path.exists('/data') else 'tips.db'
 
 stengt_tidspunkt = datetime(2026, 6, 11, 21, 5, 0)  # Riktig dato
 
@@ -32,7 +32,7 @@ def krever_innlogging(f):
     return dekorert
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''CREATE TABLE IF NOT EXISTS tips (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -289,7 +289,7 @@ def index():
         navn = request.form['navn']
         telefon = request.form['telefon']
         epost = request.form['epost']
-        conn = sqlite3.connect(DB_FILE)
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         for kamp in kamper:
             if kamp['fase'] != 'Gruppespill': continue
@@ -330,7 +330,7 @@ def regler():
 
 @app.route('/deltakere')
 def deltakere():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT DISTINCT navn, telefon, epost FROM tips')
     unike_deltakere = c.fetchall()
@@ -394,7 +394,7 @@ def deltakere():
 
 @app.route('/fasit')
 def fasit():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT kamp_id, hjemmelag, bortelag, mål_hjemme, mål_borte, resultat, dato FROM resultater ORDER BY dato ASC, kamp_id ASC')
     resultater_data = c.fetchall()
@@ -428,7 +428,7 @@ def fasit():
 
 @app.route('/dagsvinner')
 def dagsvinner():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT DISTINCT dato FROM resultater WHERE dato IS NOT NULL ORDER BY dato DESC')
     datoer = [row[0] for row in c.fetchall()]
@@ -458,7 +458,7 @@ def dagsvinner():
 @app.route('/administrer', methods=['GET', 'POST'])
 @krever_innlogging
 def administrer():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     melding = None
     if request.method == 'POST':
@@ -517,7 +517,7 @@ def administrer():
 @app.route('/resultater', methods=['GET', 'POST'])
 @krever_innlogging
 def resultater():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     if request.method == 'POST':
         action = request.form.get('action', 'lagre')
@@ -574,7 +574,7 @@ def resultater():
 
 @app.route('/poeng', methods=['GET', 'POST'])
 def poeng():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('SELECT navn, telefon, epost, kamp_id, mål_hjemme, mål_borte, resultat FROM tips')
     tips_data = c.fetchall()
@@ -683,18 +683,18 @@ def logout():
 @app.route('/backup-db')
 @krever_innlogging
 def backup_db():
-    backup_path = DB_FILE.replace('.db', '_backup.db')
-    shutil.copy2(DB_FILE, backup_path)
-    return send_file(DB_FILE, as_attachment=True, download_name='tips_backup.db')
+    backup_path = DB_PATH.replace('.db', '_backup.db')
+    shutil.copy2(DB_PATH, backup_path)
+    return send_file(DB_PATH, as_attachment=True, download_name='tips_backup.db')
 
 
 def auto_backup():
     try:
-        backup_dir = os.path.join(os.path.dirname(DB_FILE), 'backups')
+        backup_dir = os.path.join(os.path.dirname(DB_PATH), 'backups')
         os.makedirs(backup_dir, exist_ok=True)
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_path = os.path.join(backup_dir, f'tips_backup_{timestamp}.db')
-        shutil.copy2(DB_FILE, backup_path)
+        shutil.copy2(DB_PATH, backup_path)
         # Behold kun de 10 siste backupene
         backups = sorted([f for f in os.listdir(backup_dir) if f.endswith('.db')])
         while len(backups) > 10:
