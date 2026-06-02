@@ -267,7 +267,7 @@
             </div>
 
             {% set fase_info = [
-                ('8-delsfinale', 32, '4.–7. jul', '5p/lag'),
+                ('8-delsfinale', 16, '4.–7. jul', '5p/lag'),
                 ('Kvartfinale', 8, '9.–12. jul', '7p/lag'),
                 ('Semifinale', 4, '14.–15. jul', '10p/lag'),
                 ('Finale', 2, '19. jul', '15p/lag'),
@@ -486,21 +486,20 @@ function calculateAllGroups() {
 }
 
 function foresla8delsfinale() {
-    const kandidater = [], tredjeplasser = [];
+    const kandidater = [];
     ['A','B','C','D','E','F','G','H','I','J','K','L'].forEach(gruppe => {
         const p1 = document.querySelector(`select[name="gruppe_${gruppe}_plass_1"]`);
         const p2 = document.querySelector(`select[name="gruppe_${gruppe}_plass_2"]`);
-        const p3 = document.querySelector(`select[name="gruppe_${gruppe}_plass_3"]`);
         if (p1 && p1.value) kandidater.push(p1.value);
         if (p2 && p2.value) kandidater.push(p2.value);
-        if (p3 && p3.value) tredjeplasser.push(p3.value);
     });
     if (kandidater.length === 0) { showToast('⚠️ Fyll inn gruppeplasseringer først!', 'warning'); return; }
-    const alle32 = [...kandidater, ...tredjeplasser.slice(0, 8)];
+    // 24 lag (nr 1+2 fra 12 grupper), velg 16 basert på FIFA-ranking
+    const sortert = kandidater.sort((a, b) => (teamRankings[a] || 50) - (teamRankings[b] || 50)).slice(0, 16);
     document.querySelectorAll('select[name^="sluttspill_8-delsfinale_"]').forEach((sel, idx) => {
-        sel.value = idx < alle32.length ? alle32[idx] : '';
+        sel.value = idx < sortert.length ? sortert[idx] : '';
     });
-    showToast(`✅ Foreslått ${alle32.length} lag til 8-delsfinalen!`);
+    showToast(`✅ Foreslått ${sortert.length} lag til 8-delsfinalen!`);
 }
 
 function foreslaKvartfinale() {
