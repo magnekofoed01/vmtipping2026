@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 import sqlite3, smtplib, os
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import shutil
 
 load_dotenv()
@@ -17,11 +17,16 @@ SMTP_PASSORD = os.environ.get('SMTP_PASSORD', '')
 SMTP_AVSENDER = os.environ.get('SMTP_AVSENDER', '')
 DB_PATH = '/data/tips.db' if os.path.exists('/data') else 'tips.db'
 
-stengt_tidspunkt = datetime(2026, 6, 11, 21, 5, 0)  # Riktig dato
+# Norsk tidssone (UTC+2 sommertid)
+NORSK_TZ = timezone(timedelta(hours=2))
+FRIST = datetime(2026, 6, 11, 21, 0, 0, tzinfo=NORSK_TZ)
+
+def er_tipping_stengt():
+    return datetime.now(NORSK_TZ) >= FRIST
 
 @app.context_processor
 def inject_tipping_stengt():
-    return {'tipping_stengt': datetime.now() >= stengt_tidspunkt}
+    return {'tipping_stengt': er_tipping_stengt()}
 
 def krever_innlogging(f):
     @wraps(f)
@@ -273,14 +278,14 @@ def beregn_poeng(mål_hjemme, mål_borte, resultat, res):
 
 @app.route('/')
 def root():
-    tipping_stengt = datetime.now() >= stengt_tidspunkt
+    tipping_stengt = er_tipping_stengt()
     if tipping_stengt:
         return redirect('/poeng')
     return redirect('/tips')
 
 @app.route('/tips', methods=['GET', 'POST'])
 def index():
-    tipping_stengt = datetime.now() >= stengt_tidspunkt
+    tipping_stengt = er_tipping_stengt()
     if tipping_stengt:
         return redirect('/poeng')
     if request.method == 'POST':
