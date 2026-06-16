@@ -66,13 +66,14 @@
                     <div class="table-responsive">
                         <table class="table table-sm table-striped tips-table">
                             <thead class="table-dark">
-                                <tr><th>Kamp</th><th>Tips</th><th>HUB</th><th>Poeng</th></tr>
+                                <tr><th>Kamp</th><th>Tips</th><th>Fasit</th><th>HUB</th><th>Poeng</th></tr>
                             </thead>
                             <tbody>
                                 {% for tip in deltaker.tips %}
                                 <tr>
                                     <td><small>{{ tip.hjemmelag }} - {{ tip.bortelag }}</small></td>
                                     <td><strong>{{ tip.mål_hjemme }} - {{ tip.mål_borte }}</strong></td>
+                                    <td>{% if tip.har_fasit %}<small>{{ tip.fasit_hjemme }} - {{ tip.fasit_borte }}</small>{% else %}<small class="text-muted">–</small>{% endif %}</td>
                                     <td>
                                         <span class="badge {% if tip.resultat == 'H' %}bg-info{% elif tip.resultat == 'U' %}bg-warning{% else %}bg-secondary{% endif %}">
                                             {{ tip.resultat }}
@@ -84,7 +85,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="table-success">
-                                    <td colspan="3"><strong>Sum kamppoeng</strong></td>
+                                    <td colspan="4"><strong>Sum kamppoeng</strong></td>
                                     <td><strong>{{ deltaker.tips | sum(attribute='poeng') }}</strong></td>
                                 </tr>
                             </tfoot>

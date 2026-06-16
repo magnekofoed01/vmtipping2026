@@ -359,11 +359,16 @@ def deltakere():
         for t in c.fetchall():
             kid, hjemmelag, bortelag, mh, mb, res = t
             poeng = 0
+            fasit_hjemme = None
+            fasit_borte = None
             if kid in resultater_data:
                 poeng = beregn_poeng(mh, mb, res, resultater_data[kid])
+                fasit_hjemme = resultater_data[kid]['mål_hjemme']
+                fasit_borte = resultater_data[kid]['mål_borte']
             tips_formatert.append({'kamp_id': kid, 'hjemmelag': hjemmelag, 'bortelag': bortelag,
                                    'mål_hjemme': mh, 'mål_borte': mb, 'resultat': res, 'poeng': poeng,
-                                   'har_fasit': kid in resultater_data})
+                                   'har_fasit': kid in resultater_data,
+                                   'fasit_hjemme': fasit_hjemme, 'fasit_borte': fasit_borte})
         c.execute('SELECT gruppe, lag, plassering FROM gruppetips WHERE navn=? AND telefon=? AND epost=?', (navn, telefon, epost))
         gruppe_tips_liste = []
         gruppe_poeng_total = 0
