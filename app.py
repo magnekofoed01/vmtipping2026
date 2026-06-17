@@ -677,6 +677,34 @@ def poeng():
         rangering.append((key, poeng, bruker_mål_poeng.get(key, 0), bruker_resultat_poeng.get(key, 0), bruker_endring.get(key, 0), bruker_fulltreffere.get(key, 0)))
     rangering.sort(key=lambda x: x[1], reverse=True)
 
+    # Bygg ligatabell fra resultater
+    ligatabell = {}
+    for kid, data in resultater_data.items():
+        # Finn hjemmelag og bortelag fra kamper-listen
+        kamp_info = next((k for k in kamper if k['id'] == kid), None)
+        if not kamp_info or kamp_info['fase'] != 'Gruppespill':
+            continue
+        hjemmelag = kamp_info['hjemmelag'][0] if isinstance(kamp_info['hjemmelag'], tuple) else kamp_info['hjemmelag']
+        bortelag = kamp_info['bortelag'][0] if isinstance(kamp_info['bortelag'], tuple) else kamp_info['bortelag']
+        mål_h = data['mål_hjemme']
+        mål_b = data['mål_borte']
+        for lag, mf, mm in [(hjemmelag, mål_h, mål_b), (bortelag, mål_b, mål_h)]:
+            if lag not in ligatabell:
+                ligatabell[lag] = {'lag': lag, 'kamper': 0, 'seire': 0, 'uavgjort': 0, 'tap': 0, 'mf': 0, 'mm': 0}
+            ligatabell[lag]['kamper'] += 1
+            ligatabell[lag]['mf'] += mf
+            ligatabell[lag]['mm'] += mm
+            if mf > mm:
+                ligatabell[lag]['seire'] += 1
+            elif mf == mm:
+                ligatabell[lag]['uavgjort'] += 1
+            else:
+                ligatabell[lag]['tap'] += 1
+    for lag in ligatabell.values():
+        lag['mål_diff'] = lag['mf'] - lag['mm']
+        lag['poeng'] = lag['seire'] * 3 + lag['uavgjort']
+    ligatabell_sortert = sorted(ligatabell.values(), key=lambda x: (-x['poeng'], -x['mål_diff'], -x['mf']))
+
     melding = None
     if request.method == 'POST':
         action = request.form.get('action', 'email')
@@ -690,7 +718,7 @@ def poeng():
                 melding = f"❌ Feil: {str(e)}"
         else:
             melding = "✅ E-post er sendt!" if send_email([(r[0], r[1]) for r in rangering]) else "❌ Kunne ikke sende e-post."
-    return render_template('poeng.html', rangering=rangering, melding=melding)
+    return render_template('poeng.html', rangering=rangering, melding=melding, ligatabell=ligatabell_sortert)
 
 
 def generate_email_html(rangering):
