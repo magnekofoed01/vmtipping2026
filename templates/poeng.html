@@ -73,7 +73,10 @@
                     <tr>
                         <th>Plass</th>
                         <th>Navn</th>
+                        <th>Poeng på mål</th>
+                        <th>Poeng på resultat</th>
                         <th>Poeng</th>
+                        <th>Endring siste døgn</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -81,7 +84,10 @@
                     <tr>
                         <td>{{ loop.index }}</td>
                         <td>{{ item[0][0] }}</td>
-                        <td>{{ item[1] }}</td>
+                        <td class="text-info">{{ item[2] }}</td>
+                        <td class="text-info">{{ item[3] }}</td>
+                        <td><strong>{{ item[1] }}</strong></td>
+                        <td>{% if item[4] > 0 %}<span class="text-success fw-bold">+{{ item[4] }}</span>{% else %}{% endif %}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

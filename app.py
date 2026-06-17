@@ -588,14 +588,50 @@ def poeng():
     c = conn.cursor()
     c.execute('SELECT navn, telefon, epost, kamp_id, mål_hjemme, mål_borte, resultat FROM tips')
     tips_data = c.fetchall()
-    c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat FROM resultater')
-    resultater_data = {row[0]: {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3]} for row in c.fetchall()}
+    c.execute('SELECT kamp_id, mål_hjemme, mål_borte, resultat, dato FROM resultater')
+    resultater_data = {}
+    for row in c.fetchall():
+        resultater_data[row[0]] = {"mål_hjemme": row[1], "mål_borte": row[2], "resultat": row[3], "dato": row[4]}
+
+    # Finn kamper spilt siste døgn
+    nå = datetime.now(NORSK_TZ)
+    ett_døgn_siden = (nå - timedelta(hours=24)).strftime('%Y-%m-%d')
+    kamper_siste_døgn = {kid for kid, data in resultater_data.items() if data.get('dato') and data['dato'] >= ett_døgn_siden}
+
     bruker_poeng = {}
+    bruker_mål_poeng = {}
+    bruker_resultat_poeng = {}
+    bruker_endring = {}
+
     for navn, telefon, epost, kid, mål_hjemme, mål_borte, resultat in tips_data:
         key = (navn, telefon, epost)
-        if key not in bruker_poeng: bruker_poeng[key] = 0
+        if key not in bruker_poeng:
+            bruker_poeng[key] = 0
+            bruker_mål_poeng[key] = 0
+            bruker_resultat_poeng[key] = 0
+            bruker_endring[key] = 0
         if kid in resultater_data:
-            bruker_poeng[key] += beregn_poeng(mål_hjemme, mål_borte, resultat, resultater_data[kid])
+            res = resultater_data[kid]
+            # Beregn detaljert
+            mål_p = 0
+            res_p = 0
+            if resultat == res['resultat']:
+                res_p += 2
+            if int(mål_hjemme) == res['mål_hjemme']:
+                mål_p += 1
+            if int(mål_borte) == res['mål_borte']:
+                mål_p += 1
+            # Eksakt resultat gir 5p totalt (overskriver)
+            if int(mål_hjemme) == res['mål_hjemme'] and int(mål_borte) == res['mål_borte']:
+                res_p = 2 if resultat == res['resultat'] else 0
+                mål_p = 5 - res_p  # Resten tilskrives mål
+            total_kamp = beregn_poeng(mål_hjemme, mål_borte, resultat, res)
+            bruker_poeng[key] += total_kamp
+            bruker_mål_poeng[key] += mål_p
+            bruker_resultat_poeng[key] += res_p
+            if kid in kamper_siste_døgn:
+                bruker_endring[key] += total_kamp
+
     c.execute('SELECT gruppe, lag, plassering FROM gruppefasit')
     gruppefasit = {}
     for gruppe, lag, plassering in c.fetchall():
@@ -604,7 +640,11 @@ def poeng():
     c.execute('SELECT navn, telefon, epost, gruppe, lag, plassering FROM gruppetips')
     for navn, telefon, epost, gruppe, lag, plassering in c.fetchall():
         key = (navn, telefon, epost)
-        if key not in bruker_poeng: bruker_poeng[key] = 0
+        if key not in bruker_poeng:
+            bruker_poeng[key] = 0
+            bruker_mål_poeng[key] = 0
+            bruker_resultat_poeng[key] = 0
+            bruker_endring[key] = 0
         if gruppe in gruppefasit and lag in gruppefasit[gruppe]:
             if gruppefasit[gruppe][lag] == plassering:
                 bruker_poeng[key] += 2
@@ -617,11 +657,21 @@ def poeng():
     c.execute('SELECT navn, telefon, epost, fase, lag FROM sluttspilltips')
     for navn, telefon, epost, fase, lag in c.fetchall():
         key = (navn, telefon, epost)
-        if key not in bruker_poeng: bruker_poeng[key] = 0
+        if key not in bruker_poeng:
+            bruker_poeng[key] = 0
+            bruker_mål_poeng[key] = 0
+            bruker_resultat_poeng[key] = 0
+            bruker_endring[key] = 0
         if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
             bruker_poeng[key] += fase_poeng.get(fase, 5)
     conn.close()
-    rangering = sorted(bruker_poeng.items(), key=lambda x: x[1], reverse=True)
+
+    # Bygg rangering med ekstra statistikk
+    rangering = []
+    for key, poeng in bruker_poeng.items():
+        rangering.append((key, poeng, bruker_mål_poeng.get(key, 0), bruker_resultat_poeng.get(key, 0), bruker_endring.get(key, 0)))
+    rangering.sort(key=lambda x: x[1], reverse=True)
+
     melding = None
     if request.method == 'POST':
         action = request.form.get('action', 'email')
@@ -629,12 +679,12 @@ def poeng():
             try:
                 filename = 'poengoversikt.html'
                 with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(generate_email_html(rangering))
+                    f.write(generate_email_html([(r[0], r[1]) for r in rangering]))
                 melding = f"✅ Eksportert til {filename}!"
             except Exception as e:
                 melding = f"❌ Feil: {str(e)}"
         else:
-            melding = "✅ E-post er sendt!" if send_email(rangering) else "❌ Kunne ikke sende e-post."
+            melding = "✅ E-post er sendt!" if send_email([(r[0], r[1]) for r in rangering]) else "❌ Kunne ikke sende e-post."
     return render_template('poeng.html', rangering=rangering, melding=melding)
 
 
