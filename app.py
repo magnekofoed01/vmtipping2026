@@ -602,6 +602,7 @@ def poeng():
     bruker_mål_poeng = {}
     bruker_resultat_poeng = {}
     bruker_endring = {}
+    bruker_fulltreffere = {}
 
     for navn, telefon, epost, kid, mål_hjemme, mål_borte, resultat in tips_data:
         key = (navn, telefon, epost)
@@ -610,6 +611,7 @@ def poeng():
             bruker_mål_poeng[key] = 0
             bruker_resultat_poeng[key] = 0
             bruker_endring[key] = 0
+            bruker_fulltreffere[key] = 0
         if kid in resultater_data:
             res = resultater_data[kid]
             # Beregn detaljert
@@ -625,6 +627,7 @@ def poeng():
             if int(mål_hjemme) == res['mål_hjemme'] and int(mål_borte) == res['mål_borte']:
                 res_p = 2 if resultat == res['resultat'] else 0
                 mål_p = 5 - res_p  # Resten tilskrives mål
+                bruker_fulltreffere[key] += 1
             total_kamp = beregn_poeng(mål_hjemme, mål_borte, resultat, res)
             bruker_poeng[key] += total_kamp
             bruker_mål_poeng[key] += mål_p
@@ -645,6 +648,7 @@ def poeng():
             bruker_mål_poeng[key] = 0
             bruker_resultat_poeng[key] = 0
             bruker_endring[key] = 0
+            bruker_fulltreffere[key] = 0
         if gruppe in gruppefasit and lag in gruppefasit[gruppe]:
             if gruppefasit[gruppe][lag] == plassering:
                 bruker_poeng[key] += 2
@@ -662,6 +666,7 @@ def poeng():
             bruker_mål_poeng[key] = 0
             bruker_resultat_poeng[key] = 0
             bruker_endring[key] = 0
+            bruker_fulltreffere[key] = 0
         if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
             bruker_poeng[key] += fase_poeng.get(fase, 5)
     conn.close()
@@ -669,7 +674,7 @@ def poeng():
     # Bygg rangering med ekstra statistikk
     rangering = []
     for key, poeng in bruker_poeng.items():
-        rangering.append((key, poeng, bruker_mål_poeng.get(key, 0), bruker_resultat_poeng.get(key, 0), bruker_endring.get(key, 0)))
+        rangering.append((key, poeng, bruker_mål_poeng.get(key, 0), bruker_resultat_poeng.get(key, 0), bruker_endring.get(key, 0), bruker_fulltreffere.get(key, 0)))
     rangering.sort(key=lambda x: x[1], reverse=True)
 
     melding = None
