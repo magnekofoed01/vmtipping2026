@@ -1,7 +1,7 @@
 import sqlite3
 
 # Connect to the database
-db_path = r'c:\Users\a8570\OneDrive - Fremtind Forsikring AS\Dokumenter\VM tipping 2026\Tips\tips_backup (1).db'
+db_path = '/data/tips.db'
 conn = sqlite3.connect(db_path)
 cursor = conn.cursor()
 
