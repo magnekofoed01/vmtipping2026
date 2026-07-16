@@ -127,7 +127,7 @@
                         <th>Poeng på resultat</th>
                         <th>Fulltreffere 🎯</th>
                         <th>Poeng</th>
-                        <th>Endring siste døgn</th>
+                        <th>VM-vinner 🏆</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -139,7 +139,7 @@
                         <td class="text-info">{{ item[3] }}</td>
                         <td>{% if item[5] > 0 %}<span class="text-success fw-bold">{{ item[5] }}</span>{% else %}0{% endif %}</td>
                         <td><strong>{{ item[1] }}</strong></td>
-                        <td>{% if item[4] > 0 %}<span class="text-success fw-bold">+{{ item[4] }}</span>{% else %}{% endif %}</td>
+                        <td>{{ item[6] if item[6] else '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

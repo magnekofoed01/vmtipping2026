@@ -659,6 +659,7 @@ def poeng():
         sluttspill_fasit[fase].add(lag)
     fase_poeng = {'8-delsfinale': 5, 'Kvartfinale': 7, 'Semifinale': 10, 'Finale': 15, 'Vinner': 30}
     c.execute('SELECT navn, telefon, epost, fase, lag FROM sluttspilltips')
+    bruker_vinner = {}
     for navn, telefon, epost, fase, lag in c.fetchall():
         key = (navn, telefon, epost)
         if key not in bruker_poeng:
@@ -667,6 +668,8 @@ def poeng():
             bruker_resultat_poeng[key] = 0
             bruker_endring[key] = 0
             bruker_fulltreffere[key] = 0
+        if fase == 'Vinner':
+            bruker_vinner[key] = lag
         if fase in sluttspill_fasit and lag in sluttspill_fasit[fase]:
             bruker_poeng[key] += fase_poeng.get(fase, 5)
     conn.close()
@@ -674,7 +677,7 @@ def poeng():
     # Bygg rangering med ekstra statistikk
     rangering = []
     for key, poeng in bruker_poeng.items():
-        rangering.append((key, poeng, bruker_mål_poeng.get(key, 0), bruker_resultat_poeng.get(key, 0), bruker_endring.get(key, 0), bruker_fulltreffere.get(key, 0)))
+        rangering.append((key, poeng, bruker_mål_poeng.get(key, 0), bruker_resultat_poeng.get(key, 0), bruker_endring.get(key, 0), bruker_fulltreffere.get(key, 0), bruker_vinner.get(key, '')))
     rangering.sort(key=lambda x: x[1], reverse=True)
 
     # Bygg ligatabell fra resultater
